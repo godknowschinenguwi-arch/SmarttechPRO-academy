@@ -106,9 +106,12 @@ export default async function DashboardPage() {
                     <p className="mt-2 font-display font-bold">{c.courseTitle}</p>
                     <p className="mt-1 text-xs text-white/60">{c.hoursCompleted} hours · issued {new Date(c.issuedAt).toDateString()}</p>
                   </div>
-                  <div className="flex items-center justify-between p-4 text-xs">
+                  <div className="flex items-center justify-between gap-2 p-4 text-xs">
                     <span className="font-mono text-ink-faint">{c.serial}</span>
-                    <Link href={`/verify/${c.serial}`} className="font-bold text-brand-600 hover:text-brand-800">Verify / Share →</Link>
+                    <span className="flex gap-3">
+                      <a href={`/api/certificates/${c.serial}/pdf`} target="_blank" className="font-bold text-accent-600 hover:text-accent-700">⬇ PDF</a>
+                      <Link href={`/verify/${c.serial}`} className="font-bold text-brand-600 hover:text-brand-800">Verify →</Link>
+                    </span>
                   </div>
                 </div>
               ))}

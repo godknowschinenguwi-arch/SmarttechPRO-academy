@@ -53,10 +53,14 @@ export default async function VerifyPage({ params }: { params: { serial: string 
               </div>
             </div>
           </div>
-          <p className="px-6 pb-6 text-center text-xs text-ink-faint">
-            Type: {cert.kind === 'PRACTICAL' ? 'Practical completion (hands-on assessed)' : 'Course completion'} ·
-            Verification URL: /verify/{cert.serial}
-          </p>
+          <div className="flex items-center justify-center gap-4 px-6 pb-6">
+            <a href={`/api/certificates/${cert.serial}/pdf`} target="_blank" className="btn-primary !px-5 !py-2.5 text-xs">
+              ⬇ Download Official PDF
+            </a>
+            <span className="text-xs text-ink-faint">
+              {cert.kind === 'PRACTICAL' ? 'Practical competence (hands-on assessed)' : 'Course completion'}
+            </span>
+          </div>
         </div>
       </div>
     </div>
