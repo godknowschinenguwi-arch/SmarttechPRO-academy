@@ -1,0 +1,30 @@
+{
+  "name": "smarttech-academy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SmartTech Academy — Professional online skills training platform for technical trades. Building Africa's next generation of skilled technicians.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "npm run seed && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "seed": "node prisma/seed.mjs"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.17.4",
+    "bcryptjs": "^2.4.3",
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.5.0"
+  }
+}
