@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="800" y2="450" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#142457"/><stop offset="1" stop-color="#0d1836"/>
+    </linearGradient>
+    <radialGradient id="glowO" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#f97316" stop-opacity="0.55"/><stop offset="1" stop-color="#f97316" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#3380ff" stop-opacity="0.5"/><stop offset="1" stop-color="#3380ff" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="450" fill="url(#bg)"/>
+  <rect width="800" height="450" fill="url(#grid)"/>
+  <circle cx="700" cy="70" r="220" fill="url(#glowO)"/>
+  <circle cx="90" cy="400" r="200" fill="url(#glowB)"/>
+  
+  <g transform="translate(245,85)">
+    <!-- neural net -->
+    <g opacity="0.6" stroke="#3380ff" stroke-width="2">
+      <line x1="30" y1="40" x2="90" y2="20"/><line x1="30" y1="40" x2="90" y2="70"/><line x1="30" y1="40" x2="90" y2="120"/>
+      <line x1="30" y1="110" x2="90" y2="20"/><line x1="30" y1="110" x2="90" y2="70"/><line x1="30" y1="110" x2="90" y2="120"/>
+    </g>
+    <g fill="#1a3a86" stroke="#3380ff" stroke-width="2">
+      <circle cx="30" cy="40" r="11"/><circle cx="30" cy="110" r="11"/>
+      <circle cx="90" cy="20" r="11"/><circle cx="90" cy="70" r="11"/><circle cx="90" cy="120" r="11"/>
+    </g>
+    <circle cx="90" cy="70" r="11" fill="#f97316"/>
+    <!-- camera -->
+    <g transform="translate(150,40)">
+      <rect x="0" y="30" width="120" height="54" rx="16" fill="#ffffff"/>
+      <circle cx="112" cy="57" r="30" fill="#0d1836"/><circle cx="112" cy="57" r="22" fill="#1a3a86"/><circle cx="112" cy="57" r="12" fill="#3380ff"/>
+    </g>
+    <!-- detection box on a face silhouette -->
+    <g transform="translate(120,175)">
+      <rect x="0" y="0" width="120" height="90" rx="6" fill="none" stroke="#f97316" stroke-width="3"/>
+      <line x1="0" y1="0" x2="0" y2="22" stroke="#f97316" stroke-width="6"/><line x1="0" y1="0" x2="22" y2="0" stroke="#f97316" stroke-width="6"/>
+      <line x1="120" y1="90" x2="120" y2="68" stroke="#f97316" stroke-width="6"/><line x1="120" y1="90" x2="98" y2="90" stroke="#f97316" stroke-width="6"/>
+      <circle cx="60" cy="34" r="16" fill="#cadcfc" fill-opacity="0.55"/>
+      <path d="M32 84 q28 -34 56 0" fill="#cadcfc" fill-opacity="0.55"/>
+      <rect x="0" y="-22" width="70" height="18" rx="4" fill="#f97316"/>
+      <text x="8" y="-8" font-family="Arial" font-size="12" font-weight="700" fill="#142457">PERSON</text>
+    </g>
+  </g>
+  <g>
+    <rect x="32" y="386" width="239.6" height="32" rx="16" fill="#ffffff" fill-opacity="0.12"/>
+    <text x="48" y="407" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#cadcfc" letter-spacing="1">Artificial Intelligence</text>
+  </g>
+  <text x="768" y="410" text-anchor="end" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#ffffff" fill-opacity="0.35" letter-spacing="1">SMARTTECH ACADEMY</text>
+</svg>

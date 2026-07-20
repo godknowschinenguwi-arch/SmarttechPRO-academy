@@ -20,9 +20,13 @@ const GRADIENTS = [
 export default function CourseCard({ course, index = 0 }: { course: CourseCardData; index?: number }) {
   return (
     <Link href={`/courses/${course.slug}`} className="card group flex flex-col overflow-hidden transition hover:-translate-y-1 hover:shadow-lift">
-      <div className={`relative flex h-40 items-end bg-gradient-to-br ${GRADIENTS[index % GRADIENTS.length]} p-4`}>
-        <span className="absolute right-3 top-3 text-3xl drop-shadow">{course.categoryIcon ?? '🎓'}</span>
-        <span className="chip bg-white/15 text-white backdrop-blur">{course.categoryName}</span>
+      <div className={`relative flex h-40 items-end overflow-hidden bg-gradient-to-br ${GRADIENTS[index % GRADIENTS.length]} p-4`}>
+        {course.imageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={course.imageUrl} alt={course.title} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+        )}
+        {!course.imageUrl && <span className="absolute right-3 top-3 text-3xl drop-shadow">{course.categoryIcon ?? '🎓'}</span>}
+        <span className="relative chip bg-black/35 text-white backdrop-blur">{course.categoryName}</span>
       </div>
       <div className="flex flex-1 flex-col gap-3 p-5">
         <div className="flex items-center gap-2 text-xs font-semibold">

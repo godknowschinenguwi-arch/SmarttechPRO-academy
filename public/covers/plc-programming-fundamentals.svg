@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="800" y2="450" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#142457"/><stop offset="1" stop-color="#0d1836"/>
+    </linearGradient>
+    <radialGradient id="glowO" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#f97316" stop-opacity="0.55"/><stop offset="1" stop-color="#f97316" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#3380ff" stop-opacity="0.5"/><stop offset="1" stop-color="#3380ff" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="450" fill="url(#bg)"/>
+  <rect width="800" height="450" fill="url(#grid)"/>
+  <circle cx="700" cy="70" r="220" fill="url(#glowO)"/>
+  <circle cx="90" cy="400" r="200" fill="url(#glowB)"/>
+  
+  <g transform="translate(255,95)">
+    <!-- ladder rungs -->
+    <g stroke="#3380ff" stroke-width="3" opacity="0.5">
+      <line x1="10" y1="20" x2="10" y2="200"/><line x1="150" y1="20" x2="150" y2="200"/>
+      <line x1="10" y1="55" x2="150" y2="55"/><line x1="10" y1="110" x2="150" y2="110"/><line x1="10" y1="165" x2="150" y2="165"/>
+      <rect x="40" y="47" width="16" height="16" fill="none" stroke="#f97316" stroke-width="3"/>
+      <circle cx="105" cy="55" r="9" fill="none" stroke="#3380ff" stroke-width="3"/>
+      <rect x="40" y="102" width="16" height="16" fill="none" stroke="#3380ff" stroke-width="3"/>
+      <circle cx="105" cy="110" r="9" fill="none" stroke="#f97316" stroke-width="3"/>
+    </g>
+    <!-- controller -->
+    <rect x="185" y="30" width="120" height="160" rx="12" fill="#ffffff"/>
+    <rect x="185" y="30" width="120" height="34" rx="12" fill="#1449e1"/>
+    <rect x="185" y="52" width="120" height="12" fill="#1449e1"/>
+    <g fill="#f97316"><circle cx="205" cy="47" r="5"/></g>
+    <text x="222" y="52" font-family="Arial" font-size="14" font-weight="700" fill="#ffffff">PLC</text>
+    <!-- I/O terminals -->
+    <g fill="#1a3a86"><rect x="197" y="78" width="96" height="14" rx="4"/><rect x="197" y="100" width="96" height="14" rx="4"/><rect x="197" y="122" width="96" height="14" rx="4"/><rect x="197" y="144" width="96" height="14" rx="4"/></g>
+    <g fill="#f97316"><circle cx="207" cy="85" r="4"/><circle cx="207" cy="129" r="4"/></g>
+    <g fill="#3380ff"><circle cx="207" cy="107" r="4"/><circle cx="207" cy="151" r="4"/></g>
+  </g>
+  <g>
+    <rect x="32" y="386" width="221.2" height="32" rx="16" fill="#ffffff" fill-opacity="0.12"/>
+    <text x="48" y="407" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#cadcfc" letter-spacing="1">Industrial Automation</text>
+  </g>
+  <text x="768" y="410" text-anchor="end" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#ffffff" fill-opacity="0.35" letter-spacing="1">SMARTTECH ACADEMY</text>
+</svg>

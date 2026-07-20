@@ -34,9 +34,30 @@ async function ins(table, data) {
   return id;
 }
 
+// Course cover images — backfilled on every run so existing (already-seeded)
+// databases pick up new/updated covers. Swap these paths for real job photos anytime.
+const COVERS = {
+  'cctv-installation-technician': '/covers/cctv-installation-technician.svg',
+  'solar-installation-professional': '/covers/solar-installation-professional.svg',
+  'networking-for-technicians': '/covers/networking-for-technicians.svg',
+  'electric-fence-installation': '/covers/electric-fence-installation.svg',
+  'plc-programming-fundamentals': '/covers/plc-programming-fundamentals.svg',
+  'ai-cctv-computer-vision': '/covers/ai-cctv-computer-vision.svg',
+  'technician-business-startup': '/covers/technician-business-startup.svg',
+};
+
+async function backfillCovers() {
+  for (const [slug, url] of Object.entries(COVERS)) {
+    await db.execute({ sql: 'UPDATE Course SET imageUrl = ? WHERE slug = ?', args: [url, slug] });
+  }
+  console.log('Course covers backfilled.');
+}
+
 async function main() {
   const ddl = readFileSync(path.join(here, 'schema.sql'), 'utf8');
   for (const s of ddl.split(';').map((x) => x.trim()).filter(Boolean)) await db.execute(s);
+
+  await backfillCovers();
 
   const existing = await db.execute('SELECT COUNT(*) AS n FROM User');
   if (Number(existing.rows[0].n) > 0) {

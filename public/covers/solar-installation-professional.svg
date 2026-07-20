@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="800" y2="450" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#142457"/><stop offset="1" stop-color="#0d1836"/>
+    </linearGradient>
+    <radialGradient id="glowO" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#f97316" stop-opacity="0.55"/><stop offset="1" stop-color="#f97316" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#3380ff" stop-opacity="0.5"/><stop offset="1" stop-color="#3380ff" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="450" fill="url(#bg)"/>
+  <rect width="800" height="450" fill="url(#grid)"/>
+  <circle cx="700" cy="70" r="220" fill="url(#glowO)"/>
+  <circle cx="90" cy="400" r="200" fill="url(#glowB)"/>
+  
+  <g transform="translate(250,80)">
+    <!-- sun -->
+    <circle cx="330" cy="55" r="38" fill="#f97316"/>
+    <g stroke="#fdba74" stroke-width="6" stroke-linecap="round">
+      <line x1="330" y1="0" x2="330" y2="14"/><line x1="386" y1="55" x2="372" y2="55"/>
+      <line x1="370" y1="15" x2="360" y2="25"/><line x1="290" y1="15" x2="300" y2="25"/>
+      <line x1="288" y1="55" x2="274" y2="55" transform="translate(0,0)"/>
+    </g>
+    <!-- panel -->
+    <g transform="skewX(-12) translate(20,120)">
+      <rect x="0" y="0" width="230" height="140" rx="6" fill="#1a3a86" stroke="#3380ff" stroke-width="3"/>
+      <g stroke="#3380ff" stroke-opacity="0.7" stroke-width="2">
+        <line x1="0" y1="47" x2="230" y2="47"/><line x1="0" y1="94" x2="230" y2="94"/>
+        <line x1="57" y1="0" x2="57" y2="140"/><line x1="115" y1="0" x2="115" y2="140"/><line x1="172" y1="0" x2="172" y2="140"/>
+      </g>
+      <rect x="8" y="8" width="41" height="31" fill="#3380ff" fill-opacity="0.35"/>
+      <rect x="123" y="55" width="41" height="31" fill="#f97316" fill-opacity="0.4"/>
+    </g>
+    <!-- stand -->
+    <line x1="150" y1="255" x2="150" y2="300" stroke="#cadcfc" stroke-opacity="0.4" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <g>
+    <rect x="32" y="386" width="74" height="32" rx="16" fill="#ffffff" fill-opacity="0.12"/>
+    <text x="48" y="407" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#cadcfc" letter-spacing="1">Solar</text>
+  </g>
+  <text x="768" y="410" text-anchor="end" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#ffffff" fill-opacity="0.35" letter-spacing="1">SMARTTECH ACADEMY</text>
+</svg>

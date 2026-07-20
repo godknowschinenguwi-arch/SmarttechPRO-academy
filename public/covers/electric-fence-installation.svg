@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="800" y2="450" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#142457"/><stop offset="1" stop-color="#0d1836"/>
+    </linearGradient>
+    <radialGradient id="glowO" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#f97316" stop-opacity="0.55"/><stop offset="1" stop-color="#f97316" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#3380ff" stop-opacity="0.5"/><stop offset="1" stop-color="#3380ff" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="450" fill="url(#bg)"/>
+  <rect width="800" height="450" fill="url(#grid)"/>
+  <circle cx="700" cy="70" r="220" fill="url(#glowO)"/>
+  <circle cx="90" cy="400" r="200" fill="url(#glowB)"/>
+  
+  <g transform="translate(250,95)">
+    <!-- posts -->
+    <g stroke="#cadcfc" stroke-opacity="0.55" stroke-width="10" stroke-linecap="round">
+      <line x1="60" y1="20" x2="60" y2="220"/><line x1="180" y1="20" x2="180" y2="220"/><line x1="300" y1="20" x2="300" y2="220"/>
+    </g>
+    <!-- wires -->
+    <g stroke="#3380ff" stroke-width="4">
+      <line x1="40" y1="45" x2="320" y2="45"/><line x1="40" y1="95" x2="320" y2="95"/>
+      <line x1="40" y1="145" x2="320" y2="145"/><line x1="40" y1="195" x2="320" y2="195"/>
+    </g>
+    <!-- insulators -->
+    <g fill="#f97316"><circle cx="60" cy="95" r="6"/><circle cx="180" cy="145" r="6"/><circle cx="300" cy="45" r="6"/></g>
+    <!-- energizer box + bolt -->
+    <rect x="110" y="235" width="140" height="70" rx="10" fill="#ffffff"/>
+    <path d="M175 248 l-16 30 h14 l-8 24 26 -34 h-14 z" fill="#f97316"/>
+    <rect x="205" y="255" width="34" height="8" rx="4" fill="#142457" fill-opacity="0.3"/>
+    <rect x="205" y="272" width="34" height="8" rx="4" fill="#142457" fill-opacity="0.3"/>
+  </g>
+  <g>
+    <rect x="32" y="386" width="175.2" height="32" rx="16" fill="#ffffff" fill-opacity="0.12"/>
+    <text x="48" y="407" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#cadcfc" letter-spacing="1">Security Systems</text>
+  </g>
+  <text x="768" y="410" text-anchor="end" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#ffffff" fill-opacity="0.35" letter-spacing="1">SMARTTECH ACADEMY</text>
+</svg>

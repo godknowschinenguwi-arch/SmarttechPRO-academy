@@ -51,7 +51,12 @@ export default async function CoursePage({ params }: { params: { slug: string } 
           </div>
 
           {/* Purchase card */}
-          <aside className="card h-fit p-6 text-ink lg:-mb-24">
+          <aside className="card h-fit overflow-hidden text-ink lg:-mb-24">
+            {course.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={course.imageUrl} alt={course.title} className="h-44 w-full object-cover" />
+            )}
+            <div className="p-6">
             <div className="rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 p-5 text-white">
               <p className="text-xs font-semibold uppercase tracking-wide text-white/60">Full course access</p>
               <Price cents={course.priceCents} className="font-display text-4xl font-bold" />
@@ -70,6 +75,7 @@ export default async function CoursePage({ params }: { params: { slug: string } 
               <p className="rounded-xl bg-surface-soft p-3 text-xs text-ink-faint">
                 💡 Optional hands-on practical day: <Price cents={course.practicalFeeCents} className="font-bold text-ink" /> payable when you book a session.
               </p>
+            </div>
             </div>
           </aside>
         </div>
