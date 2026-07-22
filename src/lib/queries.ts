@@ -143,6 +143,106 @@ export function getCertificate(serial: string) {
      JOIN User i ON i.id = c.instructorId WHERE cert.serial = ?`, [serial]);
 }
 
+// ---- CCTV course design progress ----
+// Tracks how much of the curriculum (lesson notes, quiz questions, assignment
+// briefs) is actually authored vs. left on the generic scaffold text every
+// lesson is created with. Deliberately ignores video attachment — this app's
+// own course-builder philosophy is that a lesson can be published with notes
+// today and get its video later without being "redesigned" (see instructor
+// studio copy) — so video readiness is reported as a separate stat, not
+// blended into the design score.
+const PLACEHOLDER_CONTENT_MARKERS = [
+  'Watch the video, download the notes below',
+  'how the course is structured and what you’ll build',
+];
+const GENERIC_ASSIGNMENT_BRIEF = 'Complete the task described in the lesson';
+const GENERIC_QUIZ_PROMPT = 'Which cable is standard for analogue HD cameras?';
+
+function isContentDesigned(html: string | null): boolean {
+  if (!html) return false;
+  return !PLACEHOLDER_CONTENT_MARKERS.some((marker) => html.includes(marker));
+}
+
+function isVideoAttached(url: string | null): boolean {
+  return !!url && !url.includes('placeholder');
+}
+
+type LessonDesignRow = {
+  moduleId: string; moduleOrder: number; moduleTitle: string; moduleSummary: string | null;
+  lessonId: string; lessonOrder: number; lessonTitle: string; kind: string;
+  contentHtml: string | null; videoUrl: string | null;
+  quizId: string | null; questionCount: number; genericQuestionCount: number;
+  assignmentId: string | null; assignmentBrief: string | null;
+};
+
+export type LessonDesign = {
+  id: string; order: number; title: string; kind: string;
+  designed: boolean; videoAttached: boolean;
+};
+export type ModuleDesign = {
+  id: string; order: number; title: string; summary: string | null;
+  lessons: LessonDesign[]; designedCount: number; totalCount: number; videoCount: number;
+};
+export type CourseDesign = {
+  id: string; slug: string; title: string; isPublished: boolean;
+  modules: ModuleDesign[]; designedCount: number; totalCount: number; videoCount: number;
+};
+
+export async function getCctvDesignProgress(): Promise<CourseDesign[]> {
+  const courses = await all<any>(
+    `SELECT id, slug, title, isPublished FROM Course WHERE title LIKE '%CCTV%' OR slug LIKE '%cctv%' ORDER BY title`);
+
+  const result: CourseDesign[] = [];
+  for (const course of courses) {
+    const rows = await all<LessonDesignRow>(
+      `SELECT m.id AS moduleId, m."order" AS moduleOrder, m.title AS moduleTitle, m.summary AS moduleSummary,
+         l.id AS lessonId, l."order" AS lessonOrder, l.title AS lessonTitle, l.kind,
+         l.contentHtml, l.videoUrl,
+         q.id AS quizId,
+         (SELECT COUNT(*) FROM Question qq WHERE qq.quizId = q.id) AS questionCount,
+         (SELECT COUNT(*) FROM Question qq WHERE qq.quizId = q.id AND qq.prompt = ?) AS genericQuestionCount,
+         a.id AS assignmentId, a.brief AS assignmentBrief
+       FROM Module m
+       JOIN Lesson l ON l.moduleId = m.id
+       LEFT JOIN Quiz q ON q.lessonId = l.id
+       LEFT JOIN Assignment a ON a.lessonId = l.id
+       WHERE m.courseId = ?
+       ORDER BY m."order", l."order"`,
+      [GENERIC_QUIZ_PROMPT, course.id]);
+
+    const moduleMap = new Map<string, ModuleDesign>();
+    for (const row of rows) {
+      let mod = moduleMap.get(row.moduleId);
+      if (!mod) {
+        mod = { id: row.moduleId, order: row.moduleOrder, title: row.moduleTitle, summary: row.moduleSummary, lessons: [], designedCount: 0, totalCount: 0, videoCount: 0 };
+        moduleMap.set(row.moduleId, mod);
+      }
+
+      const contentDesigned = isContentDesigned(row.contentHtml);
+      let extraDesigned = true;
+      if (row.kind === 'QUIZ') extraDesigned = !!row.quizId && Number(row.questionCount) > 0 && Number(row.genericQuestionCount) === 0;
+      else if (row.kind === 'ASSIGNMENT') extraDesigned = !!row.assignmentBrief && !row.assignmentBrief.startsWith(GENERIC_ASSIGNMENT_BRIEF);
+      const designed = contentDesigned && extraDesigned;
+      const videoAttached = isVideoAttached(row.videoUrl);
+
+      mod.lessons.push({ id: row.lessonId, order: row.lessonOrder, title: row.lessonTitle, kind: row.kind, designed, videoAttached });
+      mod.totalCount += 1;
+      if (designed) mod.designedCount += 1;
+      if (videoAttached) mod.videoCount += 1;
+    }
+
+    const modules = Array.from(moduleMap.values()).sort((a, b) => a.order - b.order);
+    result.push({
+      id: course.id, slug: course.slug, title: course.title, isPublished: !!course.isPublished,
+      modules,
+      designedCount: modules.reduce((s, m) => s + m.designedCount, 0),
+      totalCount: modules.reduce((s, m) => s + m.totalCount, 0),
+      videoCount: modules.reduce((s, m) => s + m.videoCount, 0),
+    });
+  }
+  return result;
+}
+
 export function listPracticalSessions() {
   return all<any>(
     `SELECT p.*, c.title AS courseTitle, c.slug AS courseSlug,
