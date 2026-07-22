@@ -20,7 +20,10 @@ export default async function InstructorPage() {
           <h1 className="h-display text-3xl">Instructor studio</h1>
           <p className="mt-1 text-ink-faint">Welcome, {user.name}. Manage your courses, students and grading.</p>
         </div>
-        <button className="btn-primary">+ Create New Course</button>
+        <div className="flex gap-3">
+          <Link href="/instructor/course-design" className="btn-ghost">📐 CCTV design progress</Link>
+          <button className="btn-primary">+ Create New Course</button>
+        </div>
       </div>
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
