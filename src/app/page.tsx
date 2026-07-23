@@ -22,20 +22,21 @@ export default async function HomePage() {
         <div className="absolute inset-0 [background-image:linear-gradient(rgba(255,255,255,.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.04)_1px,transparent_1px)] [background-size:44px_44px]" />
         <div className="container-x relative grid items-center gap-12 py-20 md:grid-cols-2 md:py-28">
           <div>
-            <span className="chip bg-white/10 text-accent-300">🎓 Certification-first vocational training</span>
+            <span className="chip bg-white/10 text-accent-300">🎓 Zimbabwe’s certification-first technical trades academy</span>
             <h1 className="h-display mt-5 text-4xl leading-tight text-white sm:text-5xl lg:text-6xl">
-              Become a Certified <span className="text-accent-400">CCTV Installation</span> Technician
+              Master In-Demand <span className="text-accent-400">Technical Trades</span> — Online &amp; Hands-On
             </h1>
             <p className="mt-5 max-w-xl text-lg text-white/75">
-              Learn online at your own pace, then prove your skills at hands-on practical sessions in Harare,
-              Bulawayo and Johannesburg. Building Africa’s next generation of skilled technicians.
+              CCTV &amp; security, solar installation, networking, industrial automation, AI and business skills for
+              technicians. Learn online at your own pace, then prove your skills at hands-on practical sessions in
+              Harare, Bulawayo and Johannesburg. Building Africa’s next generation of skilled technicians.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
-              <Link href="/courses/cctv-installation-technician" className="btn-accent !px-7 !py-3.5 text-base">Enroll Now</Link>
-              <Link href="/courses" className="btn !px-7 !py-3.5 text-base bg-white/10 text-white hover:bg-white/20">Browse Courses</Link>
+              <Link href="/courses" className="btn-accent !px-7 !py-3.5 text-base">Explore All Courses</Link>
+              <Link href="/courses/cctv-installation-technician" className="btn !px-7 !py-3.5 text-base bg-white/10 text-white hover:bg-white/20">Start with CCTV Installation →</Link>
             </div>
             <div className="mt-10 flex flex-wrap gap-8 text-sm">
-              {[['8,500+', 'Students trained'], ['96%', 'Completion satisfaction'], ['3 cities', 'Practical centres']].map(([n, l]) => (
+              {[['7', 'Trade programmes'], ['3 cities', 'Hands-on practical centres'], ['100%', 'Certificates QR-verified']].map(([n, l]) => (
                 <div key={l}>
                   <p className="font-display text-2xl font-bold text-white">{n}</p>
                   <p className="text-white/60">{l}</p>
@@ -53,7 +54,7 @@ export default async function HomePage() {
                 <span className="absolute bottom-3 left-3 rounded bg-black/50 px-2 py-1 text-xs text-white/80">Technicians at work — watch the trailer</span>
               </div>
               <div className="grid grid-cols-3 divide-x divide-white/10 text-center text-xs text-white/70">
-                {['🎥 42 HD lessons', '🛠 Hands-on practicals', '📜 Verified certificate'].map((t) => (
+                {['🎥 HD video lessons', '🛠 Hands-on practicals', '📜 Verified certificates'].map((t) => (
                   <div key={t} className="px-2 py-3">{t}</div>
                 ))}
               </div>
@@ -63,6 +64,31 @@ export default async function HomePage() {
               <p className="font-display text-sm font-bold text-ink">Harare · 12 seats</p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Why SmartTech Academy */}
+      <section className="container-x py-16">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="h-display text-2xl sm:text-3xl">Why SmartTech Academy?</h2>
+          <p className="mt-3 text-ink-faint">
+            Zimbabwe’s technical trades face a skills gap, not a jobs gap. We built SmartTech Academy so any
+            motivated learner — in any city — can train to a verifiable, professional standard without leaving town.
+          </p>
+        </div>
+        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ['🎯', 'Practical-first', 'Every course pairs online theory with real hands-on assessment at a practical training centre — not just video.'],
+            ['📜', 'Certificates that mean something', 'Every certificate carries a unique serial number and QR code employers can verify instantly at smarttech.academy/verify.'],
+            ['🌍', 'Built for the region', 'Local instructors, multi-currency pricing, and EcoCash/Paynow payment options — training that fits how Zimbabwe works and pays.'],
+            ['📈', 'A growing curriculum', 'CCTV installation is live today; solar, networking, automation, AI and business skills programmes are in active development.'],
+          ].map(([icon, title, body]) => (
+            <div key={title} className="card p-6">
+              <span className="text-3xl">{icon}</span>
+              <h3 className="mt-3 font-display font-bold">{title}</h3>
+              <p className="mt-2 text-sm leading-6 text-ink-faint">{body}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -89,8 +115,8 @@ export default async function HomePage() {
       {/* Featured courses */}
       <section className="bg-white py-16">
         <div className="container-x">
-          <h2 className="h-display text-2xl sm:text-3xl">Featured courses</h2>
-          <p className="mt-2 text-ink-faint">Job-ready programmes with downloadable toolkits and optional practical days.</p>
+          <h2 className="h-display text-2xl sm:text-3xl">Explore our trade programmes</h2>
+          <p className="mt-2 text-ink-faint">Job-ready programmes across security systems, renewable energy, networking, automation, AI and business skills — with downloadable toolkits and optional practical days.</p>
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {courses.slice(0, 6).map((c, i) => (
               <CourseCard key={c.id} course={c} index={i} />
