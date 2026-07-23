@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import QRCode from 'qrcode';
 import { getCertificate } from '@/lib/queries';
 
 export default async function VerifyPage({ params }: { params: { serial: string } }) {
@@ -19,6 +20,10 @@ export default async function VerifyPage({ params }: { params: { serial: string 
       </div>
     );
   }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://smarttech-pro-academy.vercel.app';
+  const verifyUrl = `${appUrl}/verify/${cert.serial}`;
+  const qrDataUrl = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 128, color: { dark: '#0b1526', light: '#ffffff' } });
 
   return (
     <div className="container-x flex justify-center py-20">
@@ -45,12 +50,14 @@ export default async function VerifyPage({ params }: { params: { serial: string 
                 <p className="font-mono text-xs font-bold">{cert.serial}</p>
                 <p className="text-[10px] text-ink-faint">Issued {new Date(cert.issuedAt).toDateString()}</p>
               </div>
-              {/* QR placeholder (production: QR of this URL) */}
-              <div className="grid h-16 w-16 grid-cols-4 gap-0.5 rounded bg-white p-1 shadow-card">
-                {Array.from({ length: 16 }).map((_, i) => (
-                  <span key={i} className={`${[0,1,3,4,5,7,8,10,12,14,15].includes(i) ? 'bg-ink' : 'bg-white'} rounded-[2px]`} />
-                ))}
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={qrDataUrl}
+                alt={`QR code to verify certificate ${cert.serial}`}
+                width={64}
+                height={64}
+                className="h-16 w-16 rounded bg-white p-1 shadow-card"
+              />
             </div>
           </div>
           <div className="flex items-center justify-center gap-4 px-6 pb-6">
