@@ -54,6 +54,26 @@ async function backfillCovers() {
   console.log('Course covers backfilled.');
 }
 
+// Courses without a finished curriculum yet — flagged coming soon so they stay
+// visible in the catalogue but aren't open for enrollment. Runs unconditionally
+// (like backfillCovers() above) so it also fixes up an already-seeded database.
+const COMING_SOON_SLUGS = [
+  'solar-installation-professional',
+  'networking-for-technicians',
+  'electric-fence-installation',
+  'plc-programming-fundamentals',
+  'ai-cctv-computer-vision',
+  'technician-business-startup',
+];
+
+async function backfillComingSoon() {
+  await db.execute('UPDATE Course SET comingSoon = 0');
+  for (const slug of COMING_SOON_SLUGS) {
+    await db.execute({ sql: 'UPDATE Course SET comingSoon = 1 WHERE slug = ?', args: [slug] });
+  }
+  console.log('Coming-soon flags backfilled.');
+}
+
 // Replaces placeholder lesson content, quiz questions and assignment briefs
 // with the real material from the companion book (see prisma/content.mjs).
 // Runs unconditionally — like backfillCovers() above — so it safely updates
@@ -90,9 +110,18 @@ async function backfillLessonContent() {
 
 async function main() {
   const ddl = readFileSync(path.join(here, 'schema.sql'), 'utf8');
-  for (const s of ddl.split(';').map((x) => x.trim()).filter(Boolean)) await db.execute(s);
+  for (const s of ddl.split(';').map((x) => x.trim()).filter(Boolean)) {
+    try {
+      await db.execute(s);
+    } catch (err) {
+      // ALTER TABLE ... ADD COLUMN migrations re-run on every seed; ignore
+      // "already applied" errors on databases that already have the column.
+      if (!/duplicate column name/i.test(err?.message ?? '')) throw err;
+    }
+  }
 
   await backfillCovers();
+  await backfillComingSoon();
 
   const existing = await db.execute('SELECT COUNT(*) AS n FROM User');
   if (Number(existing.rows[0].n) > 0) {

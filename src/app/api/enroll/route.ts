@@ -13,8 +13,9 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Please log in first.' }, { status: 401 });
 
   const { courseSlug, provider = 'PAYNOW', coupon } = await req.json().catch(() => ({}));
-  const course = await get<any>('SELECT id, title, priceCents FROM Course WHERE slug = ? AND isPublished = 1', [courseSlug]);
+  const course = await get<any>('SELECT id, title, priceCents, comingSoon FROM Course WHERE slug = ? AND isPublished = 1', [courseSlug]);
   if (!course) return NextResponse.json({ error: 'Course not found.' }, { status: 404 });
+  if (course.comingSoon) return NextResponse.json({ error: 'This course is coming soon and not yet open for enrollment.' }, { status: 400 });
 
   const existing = await get('SELECT id FROM Enrollment WHERE userId = ? AND courseId = ?', [user.id, course.id]);
   if (existing) return NextResponse.json({ ok: true, already: true });

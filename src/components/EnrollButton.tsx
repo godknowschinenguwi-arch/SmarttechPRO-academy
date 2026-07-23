@@ -11,8 +11,8 @@ const PROVIDERS = [
   ['BANK_TRANSFER', 'Bank Transfer'],
 ] as const;
 
-export default function EnrollButton({ courseSlug, loggedIn, enrolled, firstLessonHref }: {
-  courseSlug: string; loggedIn: boolean; enrolled: boolean; firstLessonHref: string;
+export default function EnrollButton({ courseSlug, loggedIn, enrolled, comingSoon, firstLessonHref }: {
+  courseSlug: string; loggedIn: boolean; enrolled: boolean; comingSoon?: boolean; firstLessonHref: string;
 }) {
   const [open, setOpen] = useState(false);
   const [provider, setProvider] = useState('PAYNOW');
@@ -23,6 +23,13 @@ export default function EnrollButton({ courseSlug, loggedIn, enrolled, firstLess
 
   if (enrolled) {
     return <a href={firstLessonHref} className="btn-primary w-full">Continue Learning →</a>;
+  }
+  if (comingSoon) {
+    return (
+      <button disabled className="btn-primary w-full cursor-not-allowed opacity-60">
+        🚧 Coming Soon — Not Yet Open for Enrollment
+      </button>
+    );
   }
   if (!loggedIn) {
     return <a href={`/login?next=/courses/${courseSlug}`} className="btn-accent w-full">Enroll Now</a>;
