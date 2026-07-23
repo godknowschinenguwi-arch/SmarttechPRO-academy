@@ -3,6 +3,9 @@ import { cookies } from 'next/headers';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { get } from './db';
 
+if (!process.env.AUTH_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('AUTH_SECRET environment variable must be set in production — refusing to start with an insecure default.');
+}
 const SECRET = process.env.AUTH_SECRET || 'dev-secret';
 const COOKIE = 'sta_session';
 

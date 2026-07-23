@@ -32,8 +32,8 @@ export default function Footer() {
           <ul className="mt-4 space-y-2 text-sm text-white/80">
             <li><a href="mailto:support@smarttech.academy" className="hover:text-white">support@smarttech.academy</a></li>
             <li><a href="#" className="hover:text-white">Help Centre</a></li>
-            <li><a href="#" className="hover:text-white">Terms of Service</a></li>
-            <li><a href="#" className="hover:text-white">Privacy Policy</a></li>
+            <li><Link href="/terms" className="hover:text-white">Terms of Service</Link></li>
+            <li><Link href="/privacy" className="hover:text-white">Privacy Policy</Link></li>
           </ul>
         </div>
         <div>
