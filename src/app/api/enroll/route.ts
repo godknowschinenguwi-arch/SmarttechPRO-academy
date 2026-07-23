@@ -4,6 +4,7 @@ import { get, insert, run } from '@/lib/db';
 import { currentUser } from '@/lib/auth';
 import { initiatePaynow } from '@/lib/paynow';
 import { activatePayment } from '@/lib/payments';
+import { rateLimit } from '@/lib/rateLimit';
 
 // Checkout: creates a PENDING payment and returns the gateway redirect URL.
 // The webhook (/api/webhooks/paynow) confirms payment and activates the enrollment.
@@ -11,6 +12,11 @@ import { activatePayment } from '@/lib/payments';
 export async function POST(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: 'Please log in first.' }, { status: 401 });
+
+  const limited = rateLimit(`enroll:${user.id}`, 20, 60 * 60_000);
+  if (!limited.ok) {
+    return NextResponse.json({ error: 'Too many checkout attempts. Please try again shortly.' }, { status: 429, headers: { 'Retry-After': String(limited.retryAfterSec) } });
+  }
 
   const { courseSlug, provider = 'PAYNOW', coupon } = await req.json().catch(() => ({}));
   const course = await get<any>('SELECT id, title, priceCents, comingSoon FROM Course WHERE slug = ? AND isPublished = 1', [courseSlug]);

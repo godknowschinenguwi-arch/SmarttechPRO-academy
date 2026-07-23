@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { get, insert } from '@/lib/db';
 import { setSessionCookie } from '@/lib/auth';
+import { clientIp, rateLimit } from '@/lib/rateLimit';
 
 export async function POST(req: NextRequest) {
+  const limited = rateLimit(`register:${clientIp(req)}`, 5, 60 * 60_000);
+  if (!limited.ok) {
+    return NextResponse.json({ error: 'Too many signups from this network. Please try again later.' }, { status: 429, headers: { 'Retry-After': String(limited.retryAfterSec) } });
+  }
+
   const { name, email, password, city } = await req.json().catch(() => ({}));
   if (!name || !email || !password || password.length < 8) {
     return NextResponse.json({ error: 'Name, email and a password of at least 8 characters are required.' }, { status: 400 });
