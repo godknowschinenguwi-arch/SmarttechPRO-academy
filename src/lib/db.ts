@@ -29,7 +29,15 @@ export const db: Client = globalThis.__staDb ?? (globalThis.__staDb = makeClient
 async function ensureSchema(): Promise<void> {
   const ddl = readFileSync(path.join(process.cwd(), 'prisma', 'schema.sql'), 'utf8');
   const statements = ddl.split(';').map((s) => s.trim()).filter(Boolean);
-  for (const s of statements) await db.execute(s);
+  for (const s of statements) {
+    try {
+      await db.execute(s);
+    } catch (err: any) {
+      // ALTER TABLE ... ADD COLUMN migrations re-run on every boot; ignore
+      // "already applied" errors on databases that already have the column.
+      if (!/duplicate column name/i.test(err?.message ?? '')) throw err;
+    }
+  }
 }
 
 export function ready(): Promise<void> {

@@ -2,13 +2,13 @@ import { all, get } from './db';
 
 export type CourseCardData = {
   id: string; slug: string; title: string; subtitle: string | null; imageUrl: string | null;
-  difficulty: string; durationHours: number; priceCents: number;
+  difficulty: string; durationHours: number; priceCents: number; comingSoon: boolean;
   categoryName: string; categoryIcon: string | null; instructorName: string;
   rating: number | null; reviewCount: number; studentCount: number;
 };
 
 const CARD_SELECT = `
-  SELECT c.id, c.slug, c.title, c.subtitle, c.imageUrl, c.difficulty, c.durationHours, c.priceCents,
+  SELECT c.id, c.slug, c.title, c.subtitle, c.imageUrl, c.difficulty, c.durationHours, c.priceCents, c.comingSoon,
     cat.name AS categoryName, cat.icon AS categoryIcon, u.name AS instructorName,
     (SELECT ROUND(AVG(rating),1) FROM Review r WHERE r.courseId = c.id) AS rating,
     (SELECT COUNT(*) FROM Review r WHERE r.courseId = c.id) AS reviewCount,
@@ -19,8 +19,8 @@ const CARD_SELECT = `
   WHERE c.isPublished = 1`;
 
 export function listCourses(categorySlug?: string) {
-  if (categorySlug) return all<CourseCardData>(`${CARD_SELECT} AND cat.slug = ? ORDER BY studentCount DESC`, [categorySlug]);
-  return all<CourseCardData>(`${CARD_SELECT} ORDER BY studentCount DESC`);
+  if (categorySlug) return all<CourseCardData>(`${CARD_SELECT} AND cat.slug = ? ORDER BY comingSoon ASC, studentCount DESC`, [categorySlug]);
+  return all<CourseCardData>(`${CARD_SELECT} ORDER BY comingSoon ASC, studentCount DESC`);
 }
 
 export function listCategories() {
@@ -98,7 +98,7 @@ export async function getStudentDashboard(userId: string) {
     `SELECT b.name, b.description, b.icon, ub.earnedAt FROM UserBadge ub JOIN Badge b ON b.id = ub.badgeId
      WHERE ub.userId = ? ORDER BY ub.earnedAt DESC`, [userId]);
   const recommended = await all<CourseCardData>(
-    `${CARD_SELECT} AND c.id NOT IN (SELECT courseId FROM Enrollment WHERE userId = ?) ORDER BY studentCount DESC LIMIT 3`,
+    `${CARD_SELECT} AND c.comingSoon = 0 AND c.id NOT IN (SELECT courseId FROM Enrollment WHERE userId = ?) ORDER BY studentCount DESC LIMIT 3`,
     [userId]);
   return { enrollments, certificates, bookings, notifications, badges, recommended };
 }

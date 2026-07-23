@@ -75,6 +75,7 @@ model Course {
   practicalFeeCents Int  @default(0) // remaining balance for hands-on session
   isPublished    Boolean @default(false)
   certificateEnabled Boolean @default(true)
+  comingSoon     Boolean @default(false) // shown in the catalogue but not yet open for enrollment
 
   categoryId   String
   category     Category @relation(fields: [categoryId], references: [id])

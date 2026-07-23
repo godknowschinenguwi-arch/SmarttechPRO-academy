@@ -20,12 +20,15 @@ const GRADIENTS = [
 export default function CourseCard({ course, index = 0 }: { course: CourseCardData; index?: number }) {
   return (
     <Link href={`/courses/${course.slug}`} className="card group flex flex-col overflow-hidden transition hover:-translate-y-1 hover:shadow-lift">
-      <div className={`relative flex h-40 items-end overflow-hidden bg-gradient-to-br ${GRADIENTS[index % GRADIENTS.length]} p-4`}>
+      <div className={`relative flex h-40 items-end overflow-hidden bg-gradient-to-br ${GRADIENTS[index % GRADIENTS.length]} p-4 ${course.comingSoon ? 'grayscale' : ''}`}>
         {course.imageUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={course.imageUrl} alt={course.title} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
         )}
         {!course.imageUrl && <span className="absolute right-3 top-3 text-3xl drop-shadow">{course.categoryIcon ?? '🎓'}</span>}
+        {course.comingSoon && (
+          <span className="absolute left-3 top-3 chip bg-ink/80 font-bold text-white backdrop-blur">🚧 Coming Soon</span>
+        )}
         <span className="relative chip bg-black/35 text-white backdrop-blur">{course.categoryName}</span>
       </div>
       <div className="flex flex-1 flex-col gap-3 p-5">
@@ -50,7 +53,11 @@ export default function CourseCard({ course, index = 0 }: { course: CourseCardDa
         </div>
         <div className="mt-auto flex items-center justify-between border-t border-surface-line pt-3">
           <span className="text-xs text-ink-faint">👥 {Number(course.studentCount).toLocaleString()} students</span>
-          <Price cents={course.priceCents} className="font-display text-lg font-bold text-brand-700" />
+          {course.comingSoon ? (
+            <span className="text-sm font-bold text-ink-faint">Coming soon</span>
+          ) : (
+            <Price cents={course.priceCents} className="font-display text-lg font-bold text-brand-700" />
+          )}
         </div>
       </div>
     </Link>

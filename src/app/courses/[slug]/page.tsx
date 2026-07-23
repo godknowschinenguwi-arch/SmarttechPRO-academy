@@ -32,7 +32,10 @@ export default async function CoursePage({ params }: { params: { slug: string } 
       <section className="bg-brand-950 text-white">
         <div className="container-x grid gap-10 py-14 lg:grid-cols-[1fr_380px]">
           <div>
-            <span className="chip bg-white/10 text-accent-300">{course.categoryName}</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="chip bg-white/10 text-accent-300">{course.categoryName}</span>
+              {course.comingSoon && <span className="chip bg-amber-400/90 font-bold text-amber-950">🚧 Coming Soon</span>}
+            </div>
             <h1 className="h-display mt-4 text-3xl text-white sm:text-4xl">{course.title}</h1>
             <p className="mt-3 max-w-2xl text-white/75">{course.subtitle}</p>
             <div className="mt-5 flex flex-wrap items-center gap-4 text-sm text-white/70">
@@ -67,6 +70,7 @@ export default async function CoursePage({ params }: { params: { slug: string } 
                 courseSlug={course.slug}
                 loggedIn={!!user}
                 enrolled={!!enrollment}
+                comingSoon={!!course.comingSoon}
                 firstLessonHref={firstLesson ? `/learn/${course.slug}/${firstLesson.id}` : '#'}
               />
               <ul className="space-y-2 text-sm text-ink-soft">

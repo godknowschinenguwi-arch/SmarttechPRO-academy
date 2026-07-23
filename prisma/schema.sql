@@ -22,10 +22,15 @@ CREATE TABLE IF NOT EXISTS Course (
   difficulty TEXT NOT NULL DEFAULT 'BEGINNER', durationHours REAL NOT NULL DEFAULT 0,
   priceCents INTEGER NOT NULL DEFAULT 0, practicalFeeCents INTEGER NOT NULL DEFAULT 0,
   isPublished INTEGER NOT NULL DEFAULT 0, certificateEnabled INTEGER NOT NULL DEFAULT 1,
+  comingSoon INTEGER NOT NULL DEFAULT 0,
   categoryId TEXT NOT NULL REFERENCES Category(id),
   instructorId TEXT NOT NULL REFERENCES User(id),
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Migration for databases created before the comingSoon column existed
+-- (ignored by db.ts/seed.mjs when the column is already present).
+ALTER TABLE Course ADD COLUMN comingSoon INTEGER NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS Module (
   id TEXT PRIMARY KEY, title TEXT NOT NULL, summary TEXT, "order" INTEGER NOT NULL,
