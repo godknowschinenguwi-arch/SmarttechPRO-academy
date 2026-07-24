@@ -73,7 +73,7 @@ export async function getLessonBundle(lessonId: string) {
 
 export function getUserProgressForCourse(userId: string, courseId: string) {
   return all<any>(
-    `SELECT lp.lessonId, lp.completed FROM LessonProgress lp
+    `SELECT lp.lessonId, lp.completed, lp.secondsWatched FROM LessonProgress lp
      JOIN Lesson l ON l.id = lp.lessonId JOIN Module m ON m.id = l.moduleId
      WHERE lp.userId = ? AND m.courseId = ?`, [userId, courseId]);
 }
