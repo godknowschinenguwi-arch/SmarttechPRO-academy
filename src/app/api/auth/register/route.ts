@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs';
 import { get, insert } from '@/lib/db';
 import { setSessionCookie } from '@/lib/auth';
 import { clientIp, rateLimit } from '@/lib/rateLimit';
+import { sendEmail } from '@/lib/email';
+import { welcomeEmail } from '@/lib/emailTemplates';
 
 export async function POST(req: NextRequest) {
   const limited = rateLimit(`register:${clientIp(req)}`, 5, 60 * 60_000);
@@ -26,6 +28,8 @@ export async function POST(req: NextRequest) {
     userId: id, kind: 'COURSE_UPDATE', title: 'Welcome to SmartTech Academy 🎉',
     body: 'Browse the catalogue and start your first course today.', href: '/courses',
   });
+  const welcome = welcomeEmail(name);
+  await sendEmail({ to: email, subject: welcome.subject, html: welcome.html });
   setSessionCookie(id);
   return NextResponse.json({ ok: true });
 }

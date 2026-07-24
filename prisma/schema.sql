@@ -11,6 +11,12 @@ CREATE TABLE IF NOT EXISTS User (
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS PasswordResetToken (
+  id TEXT PRIMARY KEY, userId TEXT NOT NULL REFERENCES User(id),
+  tokenHash TEXT UNIQUE NOT NULL, expiresAt TEXT NOT NULL, usedAt TEXT,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS Category (
   id TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL, slug TEXT UNIQUE NOT NULL, icon TEXT
 );
@@ -31,6 +37,13 @@ CREATE TABLE IF NOT EXISTS Course (
 -- Migration for databases created before the comingSoon column existed
 -- (ignored by db.ts/seed.mjs when the column is already present).
 ALTER TABLE Course ADD COLUMN comingSoon INTEGER NOT NULL DEFAULT 0;
+
+-- Email capture for "Coming Soon" courses — the warm list to announce to when a course launches.
+CREATE TABLE IF NOT EXISTS Waitlist (
+  id TEXT PRIMARY KEY, email TEXT NOT NULL, courseId TEXT NOT NULL REFERENCES Course(id),
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (courseId, email)
+);
 
 CREATE TABLE IF NOT EXISTS Module (
   id TEXT PRIMARY KEY, title TEXT NOT NULL, summary TEXT, "order" INTEGER NOT NULL,

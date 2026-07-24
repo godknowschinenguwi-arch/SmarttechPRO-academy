@@ -1,10 +1,13 @@
 const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: https:",
-  "font-src 'self' data:",
-  "connect-src 'self'",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  // Bunny Stream (video hosting) serves manifests/segments from *.b-cdn.net —
+  // needed by hls.js's fetches (connect-src) and native <video>/blob: playback (media-src).
+  "media-src 'self' blob: https://*.b-cdn.net",
+  "connect-src 'self' https://*.b-cdn.net",
   "frame-ancestors 'none'",
   "object-src 'none'",
   "base-uri 'self'",

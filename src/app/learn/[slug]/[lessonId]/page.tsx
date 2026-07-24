@@ -24,6 +24,7 @@ export default async function LessonPage({ params }: { params: { slug: string; l
 
   const progress = await getUserProgressForCourse(user.id, course.id);
   const doneSet = new Set(progress.filter((p: any) => p.completed).map((p: any) => p.lessonId));
+  const lessonProgress = progress.find((p: any) => p.lessonId === lesson.id);
   const idx = lessons.findIndex((l: any) => l.id === lesson.id);
   const next = lessons[idx + 1] ?? null;
   const pct = lessons.length ? Math.round((doneSet.size / lessons.length) * 100) : 0;
@@ -86,7 +87,15 @@ export default async function LessonPage({ params }: { params: { slug: string; l
           <QuizPlayer quizId={quiz.id} questions={questions} passMarkPct={quiz.passMarkPct} />
         ) : (
           <>
-            {lesson.videoUrl && <VideoPlayer title={lesson.title} watermark={user.email} />}
+            {lesson.videoUrl && (
+              <VideoPlayer
+                src={lesson.videoUrl}
+                lessonId={lesson.id}
+                initialSeconds={lessonProgress?.secondsWatched ?? 0}
+                title={lesson.title}
+                watermark={user.email}
+              />
+            )}
             {lesson.contentHtml && (
               <div className="card prose-sm max-w-none p-7 text-sm leading-7 text-ink-soft [&_p]:mb-3"
                 dangerouslySetInnerHTML={{ __html: lesson.contentHtml }} />
