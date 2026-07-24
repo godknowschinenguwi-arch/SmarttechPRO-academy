@@ -19,16 +19,47 @@ export default function EnrollButton({ courseSlug, loggedIn, enrolled, comingSoo
   const [coupon, setCoupon] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [waitlistEmail, setWaitlistEmail] = useState('');
+  const [waitlistDone, setWaitlistDone] = useState(false);
   const router = useRouter();
 
   if (enrolled) {
     return <a href={firstLessonHref} className="btn-primary w-full">Continue Learning →</a>;
   }
   if (comingSoon) {
+    const joinWaitlist = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setBusy(true);
+      setError('');
+      const res = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courseSlug, email: waitlistEmail }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setBusy(false);
+      if (!res.ok) return setError(data.error ?? 'Something went wrong.');
+      setWaitlistDone(true);
+    };
     return (
-      <button disabled className="btn-primary w-full cursor-not-allowed opacity-60">
-        🚧 Coming Soon — Not Yet Open for Enrollment
-      </button>
+      <div className="space-y-3 rounded-2xl border border-surface-line bg-surface-soft p-4">
+        <p className="text-center text-sm font-bold text-ink">🚧 Coming Soon — Not Yet Open for Enrollment</p>
+        {waitlistDone ? (
+          <p className="rounded-xl bg-emerald-50 p-3 text-center text-xs font-semibold text-emerald-700">
+            🎉 You're on the list — we'll email you the moment this course opens.
+          </p>
+        ) : (
+          <form onSubmit={joinWaitlist} className="space-y-2">
+            <p className="text-center text-xs text-ink-faint">Get notified the moment this course launches.</p>
+            <input
+              type="email" required placeholder="Your email" value={waitlistEmail}
+              onChange={(e) => setWaitlistEmail(e.target.value)} className="input !py-2 text-xs"
+            />
+            {error && <p className="text-center text-xs font-semibold text-rose-600">{error}</p>}
+            <button disabled={busy} className="btn-accent w-full">{busy ? 'Joining…' : 'Notify Me'}</button>
+          </form>
+        )}
+      </div>
     );
   }
   if (!loggedIn) {

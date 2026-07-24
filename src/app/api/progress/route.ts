@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { get, insert, run } from '@/lib/db';
 import { currentUser } from '@/lib/auth';
+import { sendEmail } from '@/lib/email';
+import { certificateReadyEmail } from '@/lib/emailTemplates';
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 export async function POST(req: NextRequest) {
   const user = await currentUser();
@@ -44,6 +48,8 @@ export async function POST(req: NextRequest) {
           userId: user.id, kind: 'CERT_READY', title: 'Certificate ready 🎓',
           body: `Your certificate for “${course.title}” has been issued.`, href: '/dashboard',
         });
+        const certEmail = certificateReadyEmail(user.name, course.title, `${APP_URL}/verify/${serial}`);
+        await sendEmail({ to: user.email, subject: certEmail.subject, html: certEmail.html });
       }
     }
   }

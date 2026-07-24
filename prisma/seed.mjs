@@ -342,6 +342,10 @@ async function main() {
 
   await ins('Coupon', { code: 'LAUNCH25', percentOff: 25, maxUses: 500 });
 
+  // Re-run now that the courses this fresh seed just created actually exist —
+  // the earlier call (before the "already seeded" check above) only backfills
+  // an already-populated database; on a brand-new one there was nothing to update.
+  await backfillComingSoon();
   await backfillLessonContent();
 
   console.log('Seed complete.');

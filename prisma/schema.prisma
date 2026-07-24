@@ -46,6 +46,28 @@ model User {
   payments         Payment[]
   lessonProgress   LessonProgress[]
   auditLogs        AuditLog[]
+  passwordResets   PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  tokenHash String    @unique // sha256 of the raw token — the raw token is only ever in the emailed link
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+// Email capture for "Coming Soon" courses — the warm list to announce to when a course actually launches.
+model Waitlist {
+  id        String   @id @default(cuid())
+  email     String
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([courseId, email])
 }
 
 // ---------- Catalog ----------
@@ -89,6 +111,7 @@ model Course {
   practicals   PracticalSession[]
   favorites    Favorite[]
   forumThreads ForumThread[]
+  waitlist     Waitlist[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }

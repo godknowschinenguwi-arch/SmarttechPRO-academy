@@ -8,7 +8,7 @@ export default async function AdminPage() {
   if (!user) redirect('/login?next=/admin');
   if (user.role !== 'ADMIN') redirect('/dashboard');
 
-  const { users, courses, enrollments, certs, revenue, payments, sessions } = await getAdminDashboard();
+  const { users, courses, enrollments, certs, revenue, payments, sessions, waitlists } = await getAdminDashboard();
 
   return (
     <div className="container-x space-y-10 py-10">
@@ -73,6 +73,24 @@ export default async function AdminPage() {
           </div>
         </section>
       </div>
+
+      {waitlists.length > 0 && (
+        <section>
+          <h2 className="h-display text-xl">🔔 Coming Soon waitlists</h2>
+          <p className="mt-1 text-sm text-ink-faint">Students waiting to be notified when a course launches.</p>
+          <div className="card mt-4 divide-y divide-surface-line">
+            {waitlists.map((w: any) => (
+              <div key={w.courseSlug} className="flex items-center justify-between gap-4 p-4 text-sm">
+                <div>
+                  <p className="font-bold">{w.courseTitle}</p>
+                  <p className="text-xs text-ink-faint">Last signup {new Date(w.lastSignupAt).toDateString()}</p>
+                </div>
+                <span className="chip bg-brand-50 text-brand-700">{w.signups} waiting</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="card p-6">
         <h2 className="font-display font-bold">Management modules</h2>

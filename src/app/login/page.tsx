@@ -36,6 +36,9 @@ function LoginForm() {
       </div>
       <input type="email" required placeholder="Email address" className="input" value={email} onChange={(e) => setEmail(e.target.value)} />
       <input type="password" required placeholder="Password" className="input" value={password} onChange={(e) => setPassword(e.target.value)} />
+      <p className="text-right text-xs">
+        <Link href="/forgot-password" className="font-semibold text-brand-600 hover:text-brand-800">Forgot password?</Link>
+      </p>
       {error && <p className="text-sm font-semibold text-rose-600">{error}</p>}
       <button disabled={busy} className="btn-primary w-full">{busy ? 'Logging in…' : 'Log In'}</button>
       <p className="text-center text-sm text-ink-faint">

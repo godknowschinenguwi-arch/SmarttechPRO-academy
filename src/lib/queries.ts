@@ -133,7 +133,11 @@ export async function getAdminDashboard() {
     `SELECT p.*, c.title AS courseTitle,
        (SELECT COUNT(*) FROM PracticalBooking b WHERE b.sessionId = p.id AND b.status != 'CANCELLED') AS booked
      FROM PracticalSession p JOIN Course c ON c.id = p.courseId ORDER BY p.startsAt LIMIT 8`);
-  return { users, courses, enrollments, certs, revenue, payments, sessions };
+  const waitlists = await all<any>(
+    `SELECT c.title AS courseTitle, c.slug AS courseSlug, COUNT(w.id) AS signups, MAX(w.createdAt) AS lastSignupAt
+     FROM Course c JOIN Waitlist w ON w.courseId = c.id
+     WHERE c.comingSoon = 1 GROUP BY c.id ORDER BY signups DESC`);
+  return { users, courses, enrollments, certs, revenue, payments, sessions, waitlists };
 }
 
 export function getCertificate(serial: string) {
