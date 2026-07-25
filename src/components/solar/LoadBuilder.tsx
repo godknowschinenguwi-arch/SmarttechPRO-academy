@@ -139,35 +139,45 @@ export default function LoadBuilder({
               </p>
             )}
             {loads.map((l) => (
-              <div key={l.id} className="grid grid-cols-2 items-center gap-2 px-4 py-3 md:grid-cols-[1.6fr_84px_64px_72px_64px_28px]">
+              <div key={l.id} className="grid grid-cols-2 items-end gap-2 px-4 py-3 md:grid-cols-[1.6fr_84px_64px_72px_64px_28px] md:items-center">
                 <span className="col-span-2 flex items-center gap-2 text-sm font-semibold text-ink md:col-span-1">
                   <span>{l.icon}</span> {l.name}
                 </span>
-                <input
-                  type="number"
-                  min={0}
-                  className="input-compact"
-                  value={l.watts}
-                  onChange={(e) => update(l.id, { watts: Number(e.target.value) || 0 })}
-                />
-                <input
-                  type="number"
-                  min={0}
-                  className="input-compact"
-                  value={l.qty}
-                  onChange={(e) => update(l.id, { qty: Math.max(0, Number(e.target.value) || 0) })}
-                />
-                <input
-                  type="number"
-                  min={0}
-                  max={24}
-                  step={0.1}
-                  className="input-compact"
-                  value={l.hours}
-                  onChange={(e) => update(l.id, { hours: Math.min(24, Math.max(0, Number(e.target.value) || 0)) })}
-                />
+                <label className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-ink-faint md:hidden">Watts</span>
+                  <input
+                    type="number"
+                    min={0}
+                    className="input-compact"
+                    value={l.watts}
+                    onChange={(e) => update(l.id, { watts: Number(e.target.value) || 0 })}
+                  />
+                </label>
+                <label className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-ink-faint md:hidden">Qty</span>
+                  <input
+                    type="number"
+                    min={0}
+                    className="input-compact"
+                    value={l.qty}
+                    onChange={(e) => update(l.id, { qty: Math.max(0, Number(e.target.value) || 0) })}
+                  />
+                </label>
+                <label className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-ink-faint md:hidden">Hrs/day</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={24}
+                    step={0.1}
+                    className="input-compact"
+                    value={l.hours}
+                    onChange={(e) => update(l.id, { hours: Math.min(24, Math.max(0, Number(e.target.value) || 0)) })}
+                  />
+                </label>
                 {systemType === 'HYBRID' ? (
-                  <label className="flex items-center justify-center">
+                  <label className="flex flex-col items-center gap-0.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-ink-faint md:hidden">Backup</span>
                     <input
                       type="checkbox"
                       checked={l.essential}
@@ -179,7 +189,7 @@ export default function LoadBuilder({
                 ) : (
                   <span />
                 )}
-                <button onClick={() => remove(l.id)} className="text-ink-faint hover:text-rose-600" aria-label="Remove">
+                <button onClick={() => remove(l.id)} className="justify-self-end text-ink-faint hover:text-rose-600 md:justify-self-auto" aria-label="Remove">
                   ✕
                 </button>
               </div>
