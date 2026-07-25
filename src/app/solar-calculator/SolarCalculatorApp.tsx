@@ -1,0 +1,153 @@
+'use client';
+import { useEffect, useMemo, useState } from 'react';
+import LoadBuilder from '@/components/solar/LoadBuilder';
+import SiteConfigPanel from '@/components/solar/SiteConfigPanel';
+import SystemDiagram from '@/components/solar/SystemDiagram';
+import ResultsPanel from '@/components/solar/ResultsPanel';
+import ScenarioCompare from '@/components/solar/ScenarioCompare';
+import { computeSystemDesign, defaultSiteConfig } from '@/lib/solar/engine';
+import { APPLIANCE_LIBRARY } from '@/lib/solar/appliances';
+import type { LoadItem, Scenario } from '@/lib/solar/types';
+
+const STORAGE_KEY = 'sta_solar_scenarios_v1';
+
+const STARTER_APPLIANCES = ['led-bulb', 'fridge', 'tv-led', 'wifi-router', 'ceiling-fan'];
+
+function starterLoads(): LoadItem[] {
+  return STARTER_APPLIANCES.map((id, i) => {
+    const def = APPLIANCE_LIBRARY.find((a) => a.id === id)!;
+    return {
+      id: `starter-${i}`,
+      applianceId: def.id,
+      name: def.name,
+      category: def.category,
+      icon: def.icon,
+      watts: def.watts,
+      qty: def.defaultQty,
+      hours: def.defaultHours,
+      surgeFactor: def.surgeFactor,
+      essential: def.id === 'fridge' || def.id === 'wifi-router',
+    };
+  });
+}
+
+const TABS = [
+  { id: 'loads', label: '1. Loads' },
+  { id: 'site', label: '2. Site & system' },
+  { id: 'design', label: '3. Design' },
+  { id: 'compare', label: '4. Compare' },
+] as const;
+
+type TabId = (typeof TABS)[number]['id'];
+
+export default function SolarCalculatorApp() {
+  const [loads, setLoads] = useState<LoadItem[]>(starterLoads());
+  const [site, setSite] = useState(defaultSiteConfig());
+  const [tab, setTab] = useState<TabId>('loads');
+  const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (raw) setScenarios(JSON.parse(raw));
+    } catch {
+      // ignore corrupt storage
+    }
+  }, []);
+
+  function persist(next: Scenario[]) {
+    setScenarios(next);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  }
+
+  const design = useMemo(() => computeSystemDesign(loads, site), [loads, site]);
+
+  function saveScenario(name: string) {
+    const scenario: Scenario = {
+      id: `scn-${Date.now()}`,
+      name,
+      createdAt: new Date().toISOString(),
+      loads,
+      site,
+    };
+    persist([...scenarios, scenario]);
+  }
+
+  function loadScenario(s: Scenario) {
+    setLoads(s.loads);
+    setSite(s.site);
+    setTab('design');
+  }
+
+  function deleteScenario(id: string) {
+    persist(scenarios.filter((s) => s.id !== id));
+  }
+
+  async function exportPdf() {
+    setExporting(true);
+    try {
+      const res = await fetch('/api/solar/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loads, site }),
+      });
+      if (!res.ok) throw new Error('Failed to generate PDF');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `SmartTech-Solar-Proposal-${(site.clientName || 'design').replace(/\s+/g, '-')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('Could not generate the PDF proposal. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-1 rounded-xl border border-surface-line bg-white p-1">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${
+                tab === t.id ? 'bg-brand-600 text-white shadow-lift' : 'text-ink-soft hover:bg-surface-soft'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <button onClick={exportPdf} disabled={exporting} className="btn-accent">
+          {exporting ? 'Generating…' : '📄 Export PDF proposal'}
+        </button>
+      </div>
+
+      {tab === 'loads' && <LoadBuilder loads={loads} onChange={setLoads} systemType={site.systemType} />}
+      {tab === 'site' && <SiteConfigPanel site={site} onChange={setSite} />}
+      {tab === 'design' && (
+        <div className="flex flex-col gap-6">
+          <SystemDiagram design={design} site={site} />
+          <ResultsPanel design={design} />
+        </div>
+      )}
+      {tab === 'compare' && (
+        <ScenarioCompare
+          scenarios={scenarios}
+          currentLoads={loads}
+          currentSite={site}
+          onSave={saveScenario}
+          onLoad={loadScenario}
+          onDelete={deleteScenario}
+        />
+      )}
+    </div>
+  );
+}

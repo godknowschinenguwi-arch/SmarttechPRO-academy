@@ -30,6 +30,7 @@ export default function Navbar({ user }: { user: NavUser }) {
 
         <nav className="hidden items-center gap-6 text-sm font-semibold text-ink-soft md:flex">
           <Link href="/courses" className="hover:text-brand-700">Courses</Link>
+          <Link href="/solar-calculator" className="hover:text-brand-700">Solar Calculator</Link>
           <Link href="/practicals" className="hover:text-brand-700">Practical Training</Link>
           <Link href="/verify" className="hover:text-brand-700">Verify Certificate</Link>
         </nav>
@@ -60,6 +61,7 @@ export default function Navbar({ user }: { user: NavUser }) {
         <div className="border-t border-surface-line bg-white px-4 py-4 md:hidden">
           <div className="flex flex-col gap-3 text-sm font-semibold">
             <Link href="/courses" onClick={() => setOpen(false)}>Courses</Link>
+            <Link href="/solar-calculator" onClick={() => setOpen(false)}>Solar Calculator</Link>
             <Link href="/practicals" onClick={() => setOpen(false)}>Practical Training</Link>
             <Link href="/verify" onClick={() => setOpen(false)}>Verify Certificate</Link>
             <div className="pt-2"><CurrencySwitcher /></div>

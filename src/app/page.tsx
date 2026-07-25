@@ -112,6 +112,27 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Solar Calculator promo */}
+      <section className="container-x py-4">
+        <div className="card relative overflow-hidden bg-gradient-to-br from-brand-800 via-brand-700 to-brand-900 p-8 text-white sm:p-10">
+          <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-accent-500/20 blur-3xl" />
+          <div className="relative flex flex-col items-start gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-xl">
+              <span className="chip bg-accent-500 text-white">⚡ Free tool</span>
+              <h2 className="mt-3 font-display text-2xl font-bold sm:text-3xl">SmartTech Solar Calculator</h2>
+              <p className="mt-2 text-brand-100">
+                Size a real off-grid, hybrid or grid-tied system in minutes: build a load profile, match panels,
+                batteries, inverters and controllers from a live catalogue, watch the wiring diagram animate, and
+                export a branded proposal PDF.
+              </p>
+            </div>
+            <Link href="/solar-calculator" className="btn-accent shrink-0 !px-7 !py-3.5 text-base">
+              Launch the Calculator →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Featured courses */}
       <section className="bg-white py-16">
         <div className="container-x">

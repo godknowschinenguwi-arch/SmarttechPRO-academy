@@ -39,6 +39,10 @@ body {
     @apply w-full rounded-xl border border-surface-line bg-white px-4 py-3 text-sm text-ink placeholder:text-ink-faint
       focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100;
   }
+  .input-compact {
+    @apply input !px-2 !py-1.5 text-center text-sm [appearance:textfield]
+      [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none;
+  }
   .h-display {
     @apply font-display font-bold tracking-tight text-ink;
   }
