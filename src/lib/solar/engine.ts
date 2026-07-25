@@ -11,7 +11,10 @@ import type {
   CatalogController,
   ExistingSystem,
   UpgradeResult,
+  SolarCatalog,
 } from './types';
+
+export const DEFAULT_CATALOG: SolarCatalog = { panels: PANELS, batteries: BATTERIES, inverters: INVERTERS, controllers: CONTROLLERS };
 
 const BALANCE_OF_SYSTEM_PCT = 0.12; // mounting, DC/AC cabling, breakers, combiner box, earthing
 const ARRAY_SAFETY_FACTOR = 1.25; // NEC-style safety factor for charge current sizing
@@ -37,23 +40,29 @@ export interface EngineOptions {
   controllerId?: string;
 }
 
-function pickPanel(id?: string): CatalogPanel {
-  return PANELS.find((p) => p.id === id) ?? PANELS[1];
+function pickPanel(catalog: SolarCatalog, id?: string): CatalogPanel {
+  const pool = catalog.panels.length ? catalog.panels : PANELS;
+  const byId = pool.find((p) => p.id === id);
+  if (byId) return byId;
+  const sorted = pool.slice().sort((a, b) => a.wattage - b.wattage);
+  return sorted[Math.floor(sorted.length / 2)];
 }
-function pickBattery(chemistry: SiteConfig['batteryChemistry'], id?: string): CatalogBattery {
+function pickBattery(catalog: SolarCatalog, chemistry: SiteConfig['batteryChemistry'], id?: string): CatalogBattery {
+  const pool = catalog.batteries.length ? catalog.batteries : BATTERIES;
   if (id) {
-    const found = BATTERIES.find((b) => b.id === id);
+    const found = pool.find((b) => b.id === id);
     if (found) return found;
   }
-  return BATTERIES.find((b) => b.chemistry === chemistry) ?? BATTERIES[0];
+  return pool.find((b) => b.chemistry === chemistry) ?? pool[0];
 }
 function inverterFamily(type: SiteConfig['systemType']): CatalogInverter['type'] {
   if (type === 'GRID_TIED') return 'GRID_TIE';
   return type;
 }
-function pickInverter(systemType: SiteConfig['systemType'], continuousW: number, surgeW: number, id?: string): { inverter: CatalogInverter; count: number } {
+function pickInverter(catalog: SolarCatalog, systemType: SiteConfig['systemType'], continuousW: number, surgeW: number, id?: string): { inverter: CatalogInverter; count: number } {
   const family = inverterFamily(systemType);
-  const pool = INVERTERS.filter((i) => i.type === family);
+  const all = catalog.inverters.length ? catalog.inverters : INVERTERS;
+  const pool = all.filter((i) => i.type === family);
   if (id) {
     const found = pool.find((i) => i.id === id);
     if (found) return { inverter: found, count: Math.max(1, Math.ceil(Math.max(continuousW, 1) / found.continuousW)) };
@@ -63,17 +72,18 @@ function pickInverter(systemType: SiteConfig['systemType'], continuousW: number,
     .sort((a, b) => a.continuousW - b.continuousW)
     .find((i) => i.continuousW >= continuousW && i.surgeW >= surgeW);
   if (fit) return { inverter: fit, count: 1 };
-  const largest = pool.slice().sort((a, b) => b.continuousW - a.continuousW)[0];
+  const largest = pool.slice().sort((a, b) => b.continuousW - a.continuousW)[0] ?? all[0];
   return { inverter: largest, count: Math.max(1, Math.ceil(continuousW / largest.continuousW)) };
 }
-function pickController(chargeCurrentA: number, id?: string): { controller: CatalogController; count: number } {
+function pickController(catalog: SolarCatalog, chargeCurrentA: number, id?: string): { controller: CatalogController; count: number } {
+  const pool = catalog.controllers.length ? catalog.controllers : CONTROLLERS;
   if (id) {
-    const found = CONTROLLERS.find((c) => c.id === id);
+    const found = pool.find((c) => c.id === id);
     if (found) return { controller: found, count: Math.max(1, Math.ceil(chargeCurrentA / found.maxAmps)) };
   }
-  const fit = CONTROLLERS.slice().sort((a, b) => a.maxAmps - b.maxAmps).find((c) => c.maxAmps >= chargeCurrentA);
+  const fit = pool.slice().sort((a, b) => a.maxAmps - b.maxAmps).find((c) => c.maxAmps >= chargeCurrentA);
   if (fit) return { controller: fit, count: 1 };
-  const largest = CONTROLLERS.slice().sort((a, b) => b.maxAmps - a.maxAmps)[0];
+  const largest = pool.slice().sort((a, b) => b.maxAmps - a.maxAmps)[0];
   return { controller: largest, count: Math.max(1, Math.ceil(chargeCurrentA / largest.maxAmps)) };
 }
 
@@ -81,7 +91,7 @@ function bomLine(label: string, detail: string, qty: number, unitPriceUsd: numbe
   return { label, detail, qty, unitPriceUsd, totalUsd: Math.round(qty * unitPriceUsd) };
 }
 
-export function computeSystemDesign(loads: LoadItem[], site: SiteConfig, opts: EngineOptions = {}): DesignResult {
+export function computeSystemDesign(loads: LoadItem[], site: SiteConfig, opts: EngineOptions = {}, catalog: SolarCatalog = DEFAULT_CATALOG): DesignResult {
   const warnings: DesignWarning[] = [];
 
   const dailyEnergyWh = loads.reduce((sum, l) => sum + l.watts * l.qty * l.hours, 0);
@@ -99,19 +109,19 @@ export function computeSystemDesign(loads: LoadItem[], site: SiteConfig, opts: E
   }
 
   const isGridTied = site.systemType === 'GRID_TIED';
-  const batteryRoundTripEff = isGridTied ? 1 : pickBattery(site.batteryChemistry, opts.batteryId).roundTripEff;
+  const batteryRoundTripEff = isGridTied ? 1 : pickBattery(catalog, site.batteryChemistry, opts.batteryId).roundTripEff;
   const systemEfficiency = site.inverterEfficiencyPct * (1 - site.wiringLossPct) * batteryRoundTripEff;
   const dailyEnergyAdjustedWh = systemEfficiency > 0 ? dailyEnergyWh / systemEfficiency : dailyEnergyWh;
 
   // --- Array sizing ---
   const derating = Math.max(0.1, site.panelDeratingPct);
   const arrayWpNeeded = site.psh > 0 ? dailyEnergyAdjustedWh / (site.psh * derating) : dailyEnergyAdjustedWh;
-  const panel = pickPanel(opts.panelId);
+  const panel = pickPanel(catalog, opts.panelId);
   const panelCount = Math.max(1, Math.ceil(arrayWpNeeded / panel.wattage));
   const arrayWpActual = panelCount * panel.wattage;
 
   // --- Battery sizing ---
-  const battery = pickBattery(site.batteryChemistry, opts.batteryId);
+  const battery = pickBattery(catalog, site.batteryChemistry, opts.batteryId);
   let batteryBankWh = 0;
   let batteryBankAh = 0;
   let batterySeriesCount = 0;
@@ -142,6 +152,7 @@ export function computeSystemDesign(loads: LoadItem[], site: SiteConfig, opts: E
 
   // --- Inverter sizing ---
   const { inverter, count: inverterCount } = pickInverter(
+    catalog,
     site.systemType,
     peakLoadW * INVERTER_SAFETY_FACTOR,
     surgeLoadW,
@@ -156,7 +167,7 @@ export function computeSystemDesign(loads: LoadItem[], site: SiteConfig, opts: E
   let controller: CatalogController | null = null;
   let controllerCount = 0;
   if (!isGridTied && !inverter.mpptBuiltIn) {
-    const picked = pickController(chargeCurrentA, opts.controllerId);
+    const picked = pickController(catalog, chargeCurrentA, opts.controllerId);
     controller = picked.controller;
     controllerCount = picked.count;
     if (controller.maxAmps * controllerCount < chargeCurrentA) {
@@ -281,8 +292,8 @@ export function defaultExistingSystem(): ExistingSystem {
  * requires, and recommends the panels/battery/inverter/controller additions
  * needed to close the gap — the "upgrade an existing system" path.
  */
-export function computeUpgradeDesign(existing: ExistingSystem, loads: LoadItem[], site: SiteConfig, opts: EngineOptions = {}): UpgradeResult {
-  const target = computeSystemDesign(loads, site, opts);
+export function computeUpgradeDesign(existing: ExistingSystem, loads: LoadItem[], site: SiteConfig, opts: EngineOptions = {}, catalog: SolarCatalog = DEFAULT_CATALOG): UpgradeResult {
+  const target = computeSystemDesign(loads, site, opts, catalog);
   const warnings: DesignWarning[] = [];
 
   const gapArrayWp = Math.max(0, target.arrayWpNeeded - existing.arrayWp);

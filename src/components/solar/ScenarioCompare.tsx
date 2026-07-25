@@ -1,8 +1,8 @@
 'use client';
 import { useState } from 'react';
-import { computeSystemDesign } from '@/lib/solar/engine';
+import { computeSystemDesign, DEFAULT_CATALOG } from '@/lib/solar/engine';
 import { Price } from '@/components/CurrencyProvider';
-import type { Scenario, LoadItem, SiteConfig } from '@/lib/solar/types';
+import type { Scenario, LoadItem, SiteConfig, SolarCatalog } from '@/lib/solar/types';
 
 const TYPE_LABEL: Record<string, string> = { OFF_GRID: 'Off-grid', HYBRID: 'Hybrid', GRID_TIED: 'Grid-tied' };
 
@@ -10,6 +10,7 @@ export default function ScenarioCompare({
   scenarios,
   currentLoads,
   currentSite,
+  catalog = DEFAULT_CATALOG,
   onSave,
   onLoad,
   onDelete,
@@ -17,6 +18,7 @@ export default function ScenarioCompare({
   scenarios: Scenario[];
   currentLoads: LoadItem[];
   currentSite: SiteConfig;
+  catalog?: SolarCatalog;
   onSave: (name: string) => void;
   onLoad: (scenario: Scenario) => void;
   onDelete: (id: string) => void;
@@ -65,7 +67,7 @@ export default function ScenarioCompare({
             </thead>
             <tbody className="divide-y divide-surface-line">
               {scenarios.map((s) => {
-                const d = computeSystemDesign(s.loads, s.site);
+                const d = computeSystemDesign(s.loads, s.site, {}, catalog);
                 return (
                   <tr key={s.id}>
                     <td className="px-4 py-3 font-semibold text-ink">{s.name}</td>

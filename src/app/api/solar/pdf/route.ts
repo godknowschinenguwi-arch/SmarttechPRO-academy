@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { clientIp, rateLimit } from '@/lib/rateLimit';
 import { computeSystemDesign } from '@/lib/solar/engine';
 import { generateSolarProposalPdf } from '@/lib/solar/pdf';
-import { sanitizeLoads, sanitizeSite } from '@/lib/solar/sanitize';
+import { sanitizeLoads, sanitizeSite, sanitizeCatalog } from '@/lib/solar/sanitize';
 
 export async function POST(req: NextRequest) {
   const limited = rateLimit(`solar-pdf:${clientIp(req)}`, 20, 60 * 60_000);
@@ -15,7 +15,8 @@ export async function POST(req: NextRequest) {
 
   const loads = sanitizeLoads(body.loads);
   const site = sanitizeSite(body.site);
-  const design = computeSystemDesign(loads, site);
+  const catalog = sanitizeCatalog(body.catalog);
+  const design = computeSystemDesign(loads, site, {}, catalog);
 
   const appUrl = new URL(req.url).origin;
   const pdfBytes = await generateSolarProposalPdf({ design, site, appUrl });

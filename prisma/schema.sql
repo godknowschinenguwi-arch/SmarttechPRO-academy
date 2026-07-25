@@ -187,6 +187,36 @@ CREATE TABLE IF NOT EXISTS AuditLog (
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Solar Calculator equipment catalog — admin-editable via /admin/solar-catalog.
+-- Seeded from a curated default set on first run (see prisma/seed.mjs).
+-- The calculator falls back to its built-in static catalog if these are empty.
+CREATE TABLE IF NOT EXISTS SolarPanel (
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL,
+  wattage REAL NOT NULL, vmp REAL NOT NULL, imp REAL NOT NULL, voc REAL NOT NULL, isc REAL NOT NULL,
+  priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS SolarBattery (
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, chemistry TEXT NOT NULL,
+  voltage REAL NOT NULL, ah REAL NOT NULL, maxDodPct REAL NOT NULL, roundTripEff REAL NOT NULL,
+  cycleLife INTEGER NOT NULL, priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS SolarInverter (
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, type TEXT NOT NULL,
+  continuousW REAL NOT NULL, surgeW REAL NOT NULL, voltageOptions TEXT NOT NULL,
+  mpptBuiltIn INTEGER NOT NULL DEFAULT 0, efficiencyPct REAL NOT NULL, priceUsd REAL NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS SolarController (
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, type TEXT NOT NULL,
+  maxAmps REAL NOT NULL, maxPvVoltage REAL NOT NULL, priceUsd REAL NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_course_category ON Course(categoryId);
 CREATE INDEX IF NOT EXISTS idx_lesson_module ON Lesson(moduleId);
 CREATE INDEX IF NOT EXISTS idx_enrollment_user ON Enrollment(userId);

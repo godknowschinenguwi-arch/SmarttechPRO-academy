@@ -405,3 +405,63 @@ model AuditLog {
   ip        String?
   createdAt DateTime @default(now())
 }
+
+// ---------- Solar Calculator equipment catalog ----------
+// Admin-editable via /admin/solar-catalog; the calculator falls back to its
+// built-in static catalog if these tables are empty.
+
+model SolarPanel {
+  id        String   @id @default(cuid())
+  brand     String
+  model     String
+  wattage   Float
+  vmp       Float
+  imp       Float
+  voc       Float
+  isc       Float
+  priceUsd  Float
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model SolarBattery {
+  id            String   @id @default(cuid())
+  brand         String
+  model         String
+  chemistry     String
+  voltage       Float
+  ah            Float
+  maxDodPct     Float
+  roundTripEff  Float
+  cycleLife     Int
+  priceUsd      Float
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+}
+
+model SolarInverter {
+  id              String   @id @default(cuid())
+  brand           String
+  model           String
+  type            String
+  continuousW     Float
+  surgeW          Float
+  voltageOptions  String // JSON-encoded number[]
+  mpptBuiltIn     Boolean  @default(false)
+  efficiencyPct   Float
+  priceUsd        Float
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+}
+
+model SolarController {
+  id           String   @id @default(cuid())
+  brand        String
+  model        String
+  type         String
+  maxAmps      Float
+  maxPvVoltage Float
+  priceUsd     Float
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+}

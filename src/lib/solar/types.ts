@@ -159,6 +159,13 @@ export interface DesignResult {
   warnings: DesignWarning[];
 }
 
+export interface SolarCatalog {
+  panels: CatalogPanel[];
+  batteries: CatalogBattery[];
+  inverters: CatalogInverter[];
+  controllers: CatalogController[];
+}
+
 export interface ExistingSystem {
   arrayWp: number;
   batteryUsableKwh: number;
