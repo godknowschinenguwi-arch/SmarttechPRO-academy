@@ -159,6 +159,42 @@ export interface DesignResult {
   warnings: DesignWarning[];
 }
 
+export interface ExistingSystem {
+  arrayWp: number;
+  batteryUsableKwh: number;
+  batteryChemistry: BatteryChemistry;
+  inverterContinuousW: number;
+  inverterSurgeW: number;
+  hasController: boolean;
+  controllerMaxAmps: number;
+}
+
+export interface UpgradeResult {
+  target: DesignResult;
+  existing: ExistingSystem;
+
+  gapArrayWp: number;
+  additionalPanelCount: number;
+  panel: CatalogPanel;
+
+  gapBatteryKwh: number;
+  additionalBatteryCount: number;
+  battery: CatalogBattery;
+
+  inverterOk: boolean;
+  inverterRecommendation: string;
+
+  controllerOk: boolean;
+  controllerRecommendation: string;
+  additionalChargeCurrentA: number;
+  dcCableSizeMm2: number;
+
+  bom: BomLine[];
+  additionsTotalUsd: number;
+
+  warnings: DesignWarning[];
+}
+
 export interface Scenario {
   id: string;
   name: string;

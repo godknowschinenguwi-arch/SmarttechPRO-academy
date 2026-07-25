@@ -9,6 +9,8 @@ import type {
   CatalogBattery,
   CatalogInverter,
   CatalogController,
+  ExistingSystem,
+  UpgradeResult,
 } from './types';
 
 const BALANCE_OF_SYSTEM_PCT = 0.12; // mounting, DC/AC cabling, breakers, combiner box, earthing
@@ -22,7 +24,7 @@ const CABLE_AMPACITY: Array<[number, number]> = [
   [15, 1.5], [20, 2.5], [27, 4], [34, 6], [46, 10], [63, 16], [85, 25], [104, 35], [125, 50], [148, 70], [180, 95],
 ];
 
-function cableForCurrent(amps: number): number {
+export function cableForCurrent(amps: number): number {
   const target = amps * 1.25;
   const match = CABLE_AMPACITY.find(([maxAmps]) => maxAmps >= target);
   return match ? match[1] : CABLE_AMPACITY[CABLE_AMPACITY.length - 1][1];
@@ -259,6 +261,107 @@ export function defaultSiteConfig(): SiteConfig {
     clientName: '',
     siteName: '',
     notes: '',
+  };
+}
+
+export function defaultExistingSystem(): ExistingSystem {
+  return {
+    arrayWp: 1800,
+    batteryUsableKwh: 2.5,
+    batteryChemistry: 'LFP',
+    inverterContinuousW: 3000,
+    inverterSurgeW: 6000,
+    hasController: true,
+    controllerMaxAmps: 60,
+  };
+}
+
+/**
+ * Compares an existing installed system against what the current load profile
+ * requires, and recommends the panels/battery/inverter/controller additions
+ * needed to close the gap — the "upgrade an existing system" path.
+ */
+export function computeUpgradeDesign(existing: ExistingSystem, loads: LoadItem[], site: SiteConfig, opts: EngineOptions = {}): UpgradeResult {
+  const target = computeSystemDesign(loads, site, opts);
+  const warnings: DesignWarning[] = [];
+
+  const gapArrayWp = Math.max(0, target.arrayWpNeeded - existing.arrayWp);
+  const panel = target.panel;
+  const additionalPanelCount = gapArrayWp > 0 ? Math.ceil(gapArrayWp / panel.wattage) : 0;
+
+  const gapBatteryKwh = Math.max(0, target.batteryUsableKwh - existing.batteryUsableKwh);
+  const battery = target.battery;
+  const additionalBatteryCount = gapBatteryKwh > 0
+    ? Math.ceil((gapBatteryKwh * 1000) / (battery.voltage * battery.ah * battery.maxDodPct))
+    : 0;
+
+  if (additionalBatteryCount > 0) {
+    if (existing.batteryUsableKwh > 0 && existing.batteryChemistry !== site.batteryChemistry) {
+      warnings.push({
+        level: 'warn',
+        message: `Adding ${battery.chemistry} batteries to an existing ${existing.batteryChemistry} bank is not recommended — different chemistries charge and age differently. Use a separate bank/charge path, or replace the existing batteries with matching ones.`,
+      });
+    } else if (existing.batteryUsableKwh > 0) {
+      warnings.push({
+        level: 'info',
+        message: 'Avoid mixing new and old batteries of different age/health in the same bank — pair by condition, or isolate the addition on its own charge/discharge path.',
+      });
+    }
+  }
+
+  const requiredContinuousW = target.peakLoadW * INVERTER_SAFETY_FACTOR;
+  const inverterOk = existing.inverterContinuousW >= requiredContinuousW && existing.inverterSurgeW >= target.surgeLoadW;
+  const inverterRecommendation = inverterOk
+    ? 'Existing inverter has enough capacity for the new load profile.'
+    : `Existing inverter (${(existing.inverterContinuousW / 1000).toFixed(1)} kW continuous) is undersized for the new peak load (${(requiredContinuousW / 1000).toFixed(1)} kW needed, ${(target.surgeLoadW / 1000).toFixed(1)} kW surge). Replace with a unit around ${((target.inverter.continuousW * target.inverterCount) / 1000).toFixed(1)} kW such as ${target.inverter.brand} ${target.inverter.model}, or add a second compatible inverter in parallel if the model supports it.`;
+
+  const additionalChargeCurrentA = Math.max(0, target.chargeCurrentA - (existing.hasController ? existing.controllerMaxAmps : 0));
+  const controllerOk = !target.controller || additionalChargeCurrentA <= 0;
+  let controllerRecommendation: string;
+  if (!target.controller) {
+    controllerRecommendation = 'No separate charge controller needed for the target design — the recommended inverter has MPPT built in.';
+  } else if (controllerOk) {
+    controllerRecommendation = 'Existing charge controller can handle the new array current.';
+  } else {
+    controllerRecommendation = `Add a ${target.controller.type} controller rated for at least ${additionalChargeCurrentA.toFixed(0)} A (e.g. ${target.controller.brand} ${target.controller.model}) to handle the additional panels, or upgrade the existing controller.`;
+  }
+
+  const dcCableSizeMm2 = cableForCurrent(additionalChargeCurrentA > 0 ? additionalChargeCurrentA : target.chargeCurrentA);
+
+  const bom: BomLine[] = [];
+  if (additionalPanelCount > 0) bom.push(bomLine(`${panel.brand} ${panel.model}`, 'Additional solar PV panel', additionalPanelCount, panel.priceUsd));
+  if (additionalBatteryCount > 0) bom.push(bomLine(`${battery.brand} ${battery.model}`, 'Additional battery', additionalBatteryCount, battery.priceUsd));
+  if (!inverterOk) bom.push(bomLine(`${target.inverter.brand} ${target.inverter.model}`, 'Replacement/additional inverter', target.inverterCount, target.inverter.priceUsd));
+  if (target.controller && additionalChargeCurrentA > 0) bom.push(bomLine(`${target.controller.brand} ${target.controller.model}`, 'Additional charge controller', 1, target.controller.priceUsd));
+
+  const equipmentSubtotal = bom.reduce((s, l) => s + l.totalUsd, 0);
+  if (bom.length > 0) {
+    const bosUsd = Math.round(equipmentSubtotal * 0.1);
+    bom.push(bomLine('Additional wiring & connectors', 'Cabling, breakers, connectors for the addition (est.)', 1, bosUsd));
+  } else {
+    warnings.push({ level: 'info', message: 'Your existing system already meets the calculated requirement for this load profile — no additions needed.' });
+  }
+
+  const additionsTotalUsd = bom.reduce((s, l) => s + l.totalUsd, 0);
+
+  return {
+    target,
+    existing,
+    gapArrayWp,
+    additionalPanelCount,
+    panel,
+    gapBatteryKwh,
+    additionalBatteryCount,
+    battery,
+    inverterOk,
+    inverterRecommendation,
+    controllerOk,
+    controllerRecommendation,
+    additionalChargeCurrentA,
+    dcCableSizeMm2,
+    bom,
+    additionsTotalUsd,
+    warnings,
   };
 }
 

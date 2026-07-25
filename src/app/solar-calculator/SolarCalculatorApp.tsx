@@ -5,7 +5,10 @@ import SiteConfigPanel from '@/components/solar/SiteConfigPanel';
 import SystemDiagram from '@/components/solar/SystemDiagram';
 import ResultsPanel from '@/components/solar/ResultsPanel';
 import ScenarioCompare from '@/components/solar/ScenarioCompare';
-import { computeSystemDesign, defaultSiteConfig } from '@/lib/solar/engine';
+import ExistingSystemPanel from '@/components/solar/ExistingSystemPanel';
+import UpgradeResults from '@/components/solar/UpgradeResults';
+import AiAssistant from '@/components/solar/AiAssistant';
+import { computeSystemDesign, computeUpgradeDesign, defaultSiteConfig, defaultExistingSystem } from '@/lib/solar/engine';
 import { APPLIANCE_LIBRARY } from '@/lib/solar/appliances';
 import type { LoadItem, Scenario } from '@/lib/solar/types';
 
@@ -35,7 +38,8 @@ const TABS = [
   { id: 'loads', label: '1. Loads' },
   { id: 'site', label: '2. Site & system' },
   { id: 'design', label: '3. Design' },
-  { id: 'compare', label: '4. Compare' },
+  { id: 'upgrade', label: '4. Upgrade path' },
+  { id: 'compare', label: '5. Compare' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -43,6 +47,7 @@ type TabId = (typeof TABS)[number]['id'];
 export default function SolarCalculatorApp() {
   const [loads, setLoads] = useState<LoadItem[]>(starterLoads());
   const [site, setSite] = useState(defaultSiteConfig());
+  const [existing, setExisting] = useState(defaultExistingSystem());
   const [tab, setTab] = useState<TabId>('loads');
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [exporting, setExporting] = useState(false);
@@ -62,6 +67,7 @@ export default function SolarCalculatorApp() {
   }
 
   const design = useMemo(() => computeSystemDesign(loads, site), [loads, site]);
+  const upgrade = useMemo(() => computeUpgradeDesign(existing, loads, site), [existing, loads, site]);
 
   function saveScenario(name: string) {
     const scenario: Scenario = {
@@ -138,6 +144,17 @@ export default function SolarCalculatorApp() {
           <ResultsPanel design={design} />
         </div>
       )}
+      {tab === 'upgrade' && (
+        <div className="flex flex-col gap-6">
+          <div className="card border-brand-200 bg-brand-50 p-4 text-sm text-brand-800">
+            Upgrading an existing installation? Enter your current array, battery, inverter and controller below —
+            we&apos;ll compare them against what your load profile from step 1 actually needs, and recommend exactly
+            how many panels, batteries and cables to add.
+          </div>
+          <ExistingSystemPanel existing={existing} onChange={setExisting} />
+          <UpgradeResults upgrade={upgrade} />
+        </div>
+      )}
       {tab === 'compare' && (
         <ScenarioCompare
           scenarios={scenarios}
@@ -148,6 +165,8 @@ export default function SolarCalculatorApp() {
           onDelete={deleteScenario}
         />
       )}
+
+      <AiAssistant loads={loads} site={site} />
     </div>
   );
 }
