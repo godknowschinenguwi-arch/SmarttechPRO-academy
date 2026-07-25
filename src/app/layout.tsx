@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
+import SiteChrome from '@/components/SiteChrome';
 import { CurrencyProvider } from '@/components/CurrencyProvider';
 import { currentUser } from '@/lib/auth';
 
@@ -19,9 +18,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en">
       <body className="flex min-h-screen flex-col">
         <CurrencyProvider>
-          <Navbar user={user ? { name: user.name, role: user.role } : null} />
-          <main className="flex-1">{children}</main>
-          <Footer />
+          <SiteChrome user={user ? { name: user.name, role: user.role } : null}>{children}</SiteChrome>
         </CurrencyProvider>
       </body>
     </html>
