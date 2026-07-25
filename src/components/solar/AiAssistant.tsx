@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import type { LoadItem, SiteConfig } from '@/lib/solar/types';
+import { DEFAULT_CATALOG } from '@/lib/solar/engine';
+import type { LoadItem, SiteConfig, SolarCatalog } from '@/lib/solar/types';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -13,7 +14,15 @@ const STARTER_PROMPTS = [
   'Is my battery bank big enough?',
 ];
 
-export default function AiAssistant({ loads, site }: { loads: LoadItem[]; site: SiteConfig }) {
+export default function AiAssistant({
+  loads,
+  site,
+  catalog = DEFAULT_CATALOG,
+}: {
+  loads: LoadItem[];
+  site: SiteConfig;
+  catalog?: SolarCatalog;
+}) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -38,7 +47,7 @@ export default function AiAssistant({ loads, site }: { loads: LoadItem[]; site: 
       const res = await fetch('/api/solar/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: next, loads, site }),
+        body: JSON.stringify({ messages: next, loads, site, catalog }),
       });
 
       if (res.status === 503) {

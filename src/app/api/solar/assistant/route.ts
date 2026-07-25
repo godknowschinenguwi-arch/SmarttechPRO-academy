@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { clientIp, rateLimit } from '@/lib/rateLimit';
 import { computeSystemDesign } from '@/lib/solar/engine';
 import { buildAssistantSystemPrompt } from '@/lib/solar/assistant';
-import { sanitizeLoads, sanitizeSite } from '@/lib/solar/sanitize';
+import { sanitizeLoads, sanitizeSite, sanitizeCatalog } from '@/lib/solar/sanitize';
 
 const MAX_MESSAGES = 12;
 const MAX_MESSAGE_LENGTH = 1000;
@@ -49,7 +49,8 @@ export async function POST(req: NextRequest) {
 
   const loads = sanitizeLoads(body.loads);
   const site = sanitizeSite(body.site);
-  const design = computeSystemDesign(loads, site);
+  const catalog = sanitizeCatalog(body.catalog);
+  const design = computeSystemDesign(loads, site, {}, catalog);
   const system = buildAssistantSystemPrompt(loads, site, design);
 
   let anthropicRes: Response;

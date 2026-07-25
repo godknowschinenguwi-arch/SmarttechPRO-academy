@@ -8,9 +8,9 @@ import ScenarioCompare from '@/components/solar/ScenarioCompare';
 import ExistingSystemPanel from '@/components/solar/ExistingSystemPanel';
 import UpgradeResults from '@/components/solar/UpgradeResults';
 import AiAssistant from '@/components/solar/AiAssistant';
-import { computeSystemDesign, computeUpgradeDesign, defaultSiteConfig, defaultExistingSystem } from '@/lib/solar/engine';
+import { computeSystemDesign, computeUpgradeDesign, defaultSiteConfig, defaultExistingSystem, DEFAULT_CATALOG } from '@/lib/solar/engine';
 import { APPLIANCE_LIBRARY } from '@/lib/solar/appliances';
-import type { LoadItem, Scenario } from '@/lib/solar/types';
+import type { LoadItem, Scenario, SolarCatalog } from '@/lib/solar/types';
 
 const STORAGE_KEY = 'sta_solar_scenarios_v1';
 
@@ -44,7 +44,7 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]['id'];
 
-export default function SolarCalculatorApp() {
+export default function SolarCalculatorApp({ catalog = DEFAULT_CATALOG }: { catalog?: SolarCatalog }) {
   const [loads, setLoads] = useState<LoadItem[]>(starterLoads());
   const [site, setSite] = useState(defaultSiteConfig());
   const [existing, setExisting] = useState(defaultExistingSystem());
@@ -66,8 +66,8 @@ export default function SolarCalculatorApp() {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   }
 
-  const design = useMemo(() => computeSystemDesign(loads, site), [loads, site]);
-  const upgrade = useMemo(() => computeUpgradeDesign(existing, loads, site), [existing, loads, site]);
+  const design = useMemo(() => computeSystemDesign(loads, site, {}, catalog), [loads, site, catalog]);
+  const upgrade = useMemo(() => computeUpgradeDesign(existing, loads, site, {}, catalog), [existing, loads, site, catalog]);
 
   function saveScenario(name: string) {
     const scenario: Scenario = {
@@ -96,7 +96,7 @@ export default function SolarCalculatorApp() {
       const res = await fetch('/api/solar/pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ loads, site }),
+        body: JSON.stringify({ loads, site, catalog }),
       });
       if (!res.ok) throw new Error('Failed to generate PDF');
       const blob = await res.blob();
@@ -160,13 +160,14 @@ export default function SolarCalculatorApp() {
           scenarios={scenarios}
           currentLoads={loads}
           currentSite={site}
+          catalog={catalog}
           onSave={saveScenario}
           onLoad={loadScenario}
           onDelete={deleteScenario}
         />
       )}
 
-      <AiAssistant loads={loads} site={site} />
+      <AiAssistant loads={loads} site={site} catalog={catalog} />
     </div>
   );
 }
