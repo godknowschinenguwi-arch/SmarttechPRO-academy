@@ -8,6 +8,9 @@ const TYPE_LABEL: Record<string, string> = { OFF_GRID: 'Off-grid', HYBRID: 'Hybr
 
 export default function ScenarioCompare({
   scenarios,
+  loading = false,
+  error = '',
+  signedIn = false,
   currentLoads,
   currentSite,
   catalog = DEFAULT_CATALOG,
@@ -16,17 +19,27 @@ export default function ScenarioCompare({
   onDelete,
 }: {
   scenarios: Scenario[];
+  loading?: boolean;
+  error?: string;
+  signedIn?: boolean;
   currentLoads: LoadItem[];
   currentSite: SiteConfig;
   catalog?: SolarCatalog;
-  onSave: (name: string) => void;
+  onSave: (name: string) => void | Promise<void>;
   onLoad: (scenario: Scenario) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => void | Promise<void>;
 }) {
   const [name, setName] = useState('');
+  const [saving, setSaving] = useState(false);
 
   return (
     <div className="flex flex-col gap-4">
+      <div className={`card p-4 text-sm ${signedIn ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-brand-200 bg-brand-50 text-brand-800'}`}>
+        {signedIn
+          ? '☁️ Signed in — designs you save here are stored on your account and available on any device.'
+          : '💾 Designs are saved to this browser only. Sign in to sync your saved designs to your account and access them anywhere.'}
+      </div>
+
       <div className="card flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
         <input
           className="input flex-1"
@@ -35,18 +48,30 @@ export default function ScenarioCompare({
           onChange={(e) => setName(e.target.value)}
         />
         <button
-          className="btn-primary"
-          onClick={() => {
+          className="btn-primary disabled:opacity-50"
+          disabled={saving}
+          onClick={async () => {
             const finalName = name.trim() || `Design ${scenarios.length + 1}`;
-            onSave(finalName);
-            setName('');
+            setSaving(true);
+            try {
+              await onSave(finalName);
+              setName('');
+            } finally {
+              setSaving(false);
+            }
           }}
         >
-          Save current design
+          {saving ? 'Saving…' : signedIn ? 'Save to my account' : 'Save current design'}
         </button>
       </div>
 
-      {scenarios.length === 0 ? (
+      {error && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">{error}</div>
+      )}
+
+      {loading ? (
+        <div className="card p-8 text-center text-sm text-ink-faint">Loading your saved designs…</div>
+      ) : scenarios.length === 0 ? (
         <div className="card p-8 text-center text-sm text-ink-faint">
           Save designs above to compare budget vs. premium, or off-grid vs. hybrid, side by side.
         </div>

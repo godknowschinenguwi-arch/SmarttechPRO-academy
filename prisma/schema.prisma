@@ -46,6 +46,7 @@ model User {
   payments         Payment[]
   lessonProgress   LessonProgress[]
   auditLogs        AuditLog[]
+  solarDesigns     SolarDesign[]
 }
 
 // ---------- Catalog ----------
@@ -464,4 +465,15 @@ model SolarController {
   priceUsd     Float
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
+}
+
+model SolarDesign {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  name      String
+  loads     String // JSON-encoded LoadItem[]
+  site      String // JSON-encoded SiteConfig
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

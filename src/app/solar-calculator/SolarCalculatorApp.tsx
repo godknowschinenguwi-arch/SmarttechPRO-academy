@@ -44,24 +44,40 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]['id'];
 
-export default function SolarCalculatorApp({ catalog = DEFAULT_CATALOG }: { catalog?: SolarCatalog }) {
+export default function SolarCalculatorApp({
+  catalog = DEFAULT_CATALOG,
+  signedIn = false,
+}: {
+  catalog?: SolarCatalog;
+  signedIn?: boolean;
+}) {
   const [loads, setLoads] = useState<LoadItem[]>(starterLoads());
   const [site, setSite] = useState(defaultSiteConfig());
   const [existing, setExisting] = useState(defaultExistingSystem());
   const [tab, setTab] = useState<TabId>('loads');
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [scenariosLoading, setScenariosLoading] = useState(signedIn);
+  const [scenarioError, setScenarioError] = useState('');
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
+    if (signedIn) {
+      fetch('/api/solar/designs')
+        .then((r) => r.json())
+        .then((data) => setScenarios(data.designs ?? []))
+        .catch(() => setScenarioError('Could not load your saved designs.'))
+        .finally(() => setScenariosLoading(false));
+      return;
+    }
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) setScenarios(JSON.parse(raw));
     } catch {
       // ignore corrupt storage
     }
-  }, []);
+  }, [signedIn]);
 
-  function persist(next: Scenario[]) {
+  function persistLocal(next: Scenario[]) {
     setScenarios(next);
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   }
@@ -69,7 +85,26 @@ export default function SolarCalculatorApp({ catalog = DEFAULT_CATALOG }: { cata
   const design = useMemo(() => computeSystemDesign(loads, site, {}, catalog), [loads, site, catalog]);
   const upgrade = useMemo(() => computeUpgradeDesign(existing, loads, site, {}, catalog), [existing, loads, site, catalog]);
 
-  function saveScenario(name: string) {
+  async function saveScenario(name: string) {
+    if (signedIn) {
+      setScenarioError('');
+      try {
+        const res = await fetch('/api/solar/designs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, loads, site }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setScenarioError(data.error || 'Could not save your design to your account.');
+          return;
+        }
+        setScenarios((prev) => [{ id: data.id, name: data.name, createdAt: new Date().toISOString(), loads: data.loads, site: data.site }, ...prev]);
+      } catch {
+        setScenarioError('Could not reach the server. Check your connection and try again.');
+      }
+      return;
+    }
     const scenario: Scenario = {
       id: `scn-${Date.now()}`,
       name,
@@ -77,7 +112,7 @@ export default function SolarCalculatorApp({ catalog = DEFAULT_CATALOG }: { cata
       loads,
       site,
     };
-    persist([...scenarios, scenario]);
+    persistLocal([...scenarios, scenario]);
   }
 
   function loadScenario(s: Scenario) {
@@ -86,8 +121,17 @@ export default function SolarCalculatorApp({ catalog = DEFAULT_CATALOG }: { cata
     setTab('design');
   }
 
-  function deleteScenario(id: string) {
-    persist(scenarios.filter((s) => s.id !== id));
+  async function deleteScenario(id: string) {
+    if (signedIn) {
+      setScenarios((prev) => prev.filter((s) => s.id !== id));
+      try {
+        await fetch(`/api/solar/designs/${id}`, { method: 'DELETE' });
+      } catch {
+        setScenarioError('Could not delete that design — it may reappear on refresh.');
+      }
+      return;
+    }
+    persistLocal(scenarios.filter((s) => s.id !== id));
   }
 
   async function exportPdf() {
@@ -158,6 +202,9 @@ export default function SolarCalculatorApp({ catalog = DEFAULT_CATALOG }: { cata
       {tab === 'compare' && (
         <ScenarioCompare
           scenarios={scenarios}
+          loading={scenariosLoading}
+          error={scenarioError}
+          signedIn={signedIn}
           currentLoads={loads}
           currentSite={site}
           catalog={catalog}
