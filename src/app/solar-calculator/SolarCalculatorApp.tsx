@@ -141,7 +141,7 @@ export default function SolarCalculatorApp({ catalog = DEFAULT_CATALOG }: { cata
       {tab === 'design' && (
         <div className="flex flex-col gap-6">
           <SystemDiagram design={design} site={site} />
-          <ResultsPanel design={design} />
+          <ResultsPanel design={design} site={site} />
         </div>
       )}
       {tab === 'upgrade' && (

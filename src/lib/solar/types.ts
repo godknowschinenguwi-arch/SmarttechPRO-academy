@@ -99,6 +99,10 @@ export interface SiteConfig {
   installBufferPct: number; // 0-1, labour + misc BOM buffer
   monthlyGridBillUsd: number;
   tariffUsdPerKwh: number;
+  financingEnabled: boolean;
+  downPaymentUsd: number;
+  loanTermYears: number;
+  loanInterestRatePct: number; // annual, percent
   clientName: string;
   siteName: string;
   notes: string;

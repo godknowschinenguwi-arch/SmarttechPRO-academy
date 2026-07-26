@@ -24,6 +24,10 @@ export default function SiteConfigPanel({
   onChange: (site: SiteConfig) => void;
 }) {
   const [advanced, setAdvanced] = useState(false);
+  const [address, setAddress] = useState('');
+  const [lookupBusy, setLookupBusy] = useState(false);
+  const [lookupError, setLookupError] = useState('');
+  const [lookupLabel, setLookupLabel] = useState('');
 
   function set<K extends keyof SiteConfig>(key: K, value: SiteConfig[K]) {
     onChange({ ...site, [key]: value });
@@ -32,6 +36,53 @@ export default function SiteConfigPanel({
   function setLocation(id: string) {
     const loc = LOCATIONS.find((l) => l.id === id);
     if (loc) onChange({ ...site, locationId: id, psh: loc.psh });
+    setLookupLabel('');
+    setLookupError('');
+  }
+
+  async function applyIrradiance(payload: { lat: number; lon: number } | { address: string }) {
+    setLookupBusy(true);
+    setLookupError('');
+    try {
+      const res = await fetch('/api/solar/irradiance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setLookupError(data.error || 'Could not fetch solar data for this location.');
+        return;
+      }
+      onChange({ ...site, locationId: 'custom', psh: data.psh });
+      setLookupLabel(data.label ? `${data.label} — ${data.psh.toFixed(1)} PSH` : `${data.psh.toFixed(1)} PSH at this location`);
+    } catch {
+      setLookupError('Could not reach the solar data service. Check your connection and try again.');
+    } finally {
+      setLookupBusy(false);
+    }
+  }
+
+  function useMyLocation() {
+    if (!navigator.geolocation) {
+      setLookupError('Location services are not available in this browser.');
+      return;
+    }
+    setLookupBusy(true);
+    setLookupError('');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => applyIrradiance({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      () => {
+        setLookupBusy(false);
+        setLookupError('Could not get your location — check location permissions and try again.');
+      },
+      { timeout: 10000 }
+    );
+  }
+
+  function lookupAddress() {
+    if (!address.trim()) return;
+    applyIrradiance({ address: address.trim() });
   }
 
   return (
@@ -57,6 +108,28 @@ export default function SiteConfigPanel({
               </option>
             ))}
           </select>
+
+          <div className="mt-2 flex flex-col gap-2 rounded-xl bg-surface-soft p-3">
+            <p className="text-[11px] font-semibold text-ink-faint">Or pull real irradiance data for an exact site:</p>
+            <button type="button" onClick={useMyLocation} disabled={lookupBusy} className="btn-ghost w-full !py-2 text-xs disabled:opacity-50">
+              📍 {lookupBusy ? 'Looking up…' : 'Use my current location'}
+            </button>
+            <div className="flex gap-2">
+              <input
+                className="input !py-2 text-xs"
+                placeholder="Or type an address / town…"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), lookupAddress())}
+              />
+              <button type="button" onClick={lookupAddress} disabled={lookupBusy || !address.trim()} className="btn-ghost !px-3 !py-2 text-xs disabled:opacity-50">
+                🔍
+              </button>
+            </div>
+            {lookupLabel && <p className="text-[11px] font-semibold text-emerald-700">✓ {lookupLabel}</p>}
+            {lookupError && <p className="text-[11px] font-semibold text-rose-600">{lookupError}</p>}
+          </div>
+
           {site.locationId === 'custom' && (
             <input
               type="number"
@@ -151,6 +224,34 @@ export default function SiteConfigPanel({
             <PctField label="Inverter efficiency" value={site.inverterEfficiencyPct} onChange={(v) => set('inverterEfficiencyPct', v)} />
             <PctField label="Wiring loss" value={site.wiringLossPct} onChange={(v) => set('wiringLossPct', v)} />
             <PctField label="Install/BOS buffer" value={site.installBufferPct} onChange={(v) => set('installBufferPct', v)} />
+          </div>
+        )}
+      </div>
+
+      <div className="card flex flex-col gap-4 p-5 lg:col-span-2">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={site.financingEnabled}
+            onChange={(e) => set('financingEnabled', e.target.checked)}
+            className="h-4 w-4 accent-brand-600"
+          />
+          <h3 className="font-display text-sm font-bold text-ink">Compare against financing</h3>
+        </label>
+        {site.financingEnabled && (
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-ink-soft">Down payment (USD)</label>
+              <input type="number" min={0} className="input" value={site.downPaymentUsd} onChange={(e) => set('downPaymentUsd', Math.max(0, Number(e.target.value) || 0))} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-ink-soft">Loan term (years)</label>
+              <input type="number" min={0.5} max={15} step={0.5} className="input" value={site.loanTermYears} onChange={(e) => set('loanTermYears', Math.min(15, Math.max(0.5, Number(e.target.value) || 0.5)))} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-ink-soft">Annual interest rate (%)</label>
+              <input type="number" min={0} max={100} step={0.5} className="input" value={site.loanInterestRatePct} onChange={(e) => set('loanInterestRatePct', Math.max(0, Number(e.target.value) || 0))} />
+            </div>
           </div>
         )}
       </div>

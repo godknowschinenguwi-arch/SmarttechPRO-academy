@@ -1,6 +1,9 @@
 'use client';
+import { useMemo } from 'react';
 import { useCurrency, Price } from '@/components/CurrencyProvider';
-import type { DesignResult } from '@/lib/solar/types';
+import { formatPrice } from '@/lib/currency';
+import { computeFinancing } from '@/lib/solar/finance';
+import type { DesignResult, SiteConfig } from '@/lib/solar/types';
 
 const WARN_STYLE: Record<string, string> = {
   info: 'bg-brand-50 text-brand-700 border-brand-200',
@@ -8,8 +11,12 @@ const WARN_STYLE: Record<string, string> = {
   critical: 'bg-rose-50 text-rose-700 border-rose-200',
 };
 
-export default function ResultsPanel({ design }: { design: DesignResult }) {
+export default function ResultsPanel({ design, site }: { design: DesignResult; site: SiteConfig }) {
   const { code } = useCurrency();
+  const financing = useMemo(
+    () => (site.financingEnabled ? computeFinancing(design.totalUsd, design.estMonthlySavingsUsd, site) : null),
+    [site, design.totalUsd, design.estMonthlySavingsUsd]
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -98,6 +105,31 @@ export default function ResultsPanel({ design }: { design: DesignResult }) {
           </p>
         </div>
       </div>
+
+      {financing && (
+        <div className="card p-4">
+          <h3 className="mb-3 font-display text-sm font-bold text-ink">Financing vs. staying on grid</h3>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <SummaryStat label="Monthly payment" value={<Price cents={financing.monthlyPaymentUsd * 100} />} sub={`${financing.months} months @ ${site.loanInterestRatePct}%`} />
+            <SummaryStat
+              label="Net monthly cash flow"
+              value={`${financing.monthlyCashFlowUsd < 0 ? '-' : '+'}${formatPrice(Math.abs(financing.monthlyCashFlowUsd) * 100, code)}`}
+              sub={financing.monthlyCashFlowUsd >= 0 ? 'Savings cover the payment' : 'Payment exceeds savings'}
+            />
+            <SummaryStat label="Total interest" value={<Price cents={financing.totalInterestUsd * 100} />} sub="over the loan term" />
+            <SummaryStat
+              label={financing.netPositionOverTermUsd >= 0 ? 'Net savings vs. grid' : 'Net cost vs. grid'}
+              value={<Price cents={Math.abs(financing.netPositionOverTermUsd) * 100} />}
+              sub={`over ${site.loanTermYears} yr${site.loanTermYears !== 1 ? 's' : ''}, vs. paying $${site.monthlyGridBillUsd}/mo`}
+            />
+          </div>
+          <p className="mt-3 text-[11px] leading-relaxed text-ink-faint">
+            Compares the down payment + loan repayments against what the same period would cost on the grid alone
+            (monthly grid bill × loan term), using the estimated monthly solar savings above. Indicative only —
+            not a credit offer.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
