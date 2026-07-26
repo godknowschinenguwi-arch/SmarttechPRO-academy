@@ -1,52 +1,73 @@
 'use client';
 import { useState } from 'react';
-import type { LoadItem, SiteConfig, SolarCatalog } from '@/lib/solar/types';
+import { whatsappLink } from '@/lib/contact';
+import { buildQuoteWhatsAppMessage } from '@/lib/solar/whatsapp';
+import type { DesignResult, LoadItem, SiteConfig, SolarCatalog } from '@/lib/solar/types';
 
 export default function RequestQuoteModal({
   loads,
   site,
   catalog,
+  design,
   onClose,
 }: {
   loads: LoadItem[];
   site: SiteConfig;
   catalog: SolarCatalog;
+  design: DesignResult;
   onClose: () => void;
 }) {
   const [form, setForm] = useState({ name: site.clientName || '', phone: '', email: '', city: '', message: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState<'form' | 'whatsapp' | null>(null);
 
   function set<K extends keyof typeof form>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  function validate(): boolean {
     if (!form.name.trim() || !form.phone.trim()) {
       setError('Name and phone number are required.');
-      return;
+      return false;
     }
-    setBusy(true);
     setError('');
+    return true;
+  }
+
+  async function submitLead(): Promise<boolean> {
+    const res = await fetch('/api/solar/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...form, loads, site, catalog }),
+    });
+    return res.ok;
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!validate()) return;
+    setBusy(true);
     try {
-      const res = await fetch('/api/solar/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, loads, site, catalog }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data.error || 'Could not submit your request. Please try again.');
+      const ok = await submitLead();
+      if (!ok) {
+        setError('Could not submit your request. Please try again.');
         return;
       }
-      setDone(true);
+      setDone('form');
     } catch {
       setError('Could not reach the server. Check your connection and try again.');
     } finally {
       setBusy(false);
     }
+  }
+
+  function sendViaWhatsApp() {
+    if (!validate()) return;
+    submitLead().catch(() => {});
+    const url = whatsappLink(buildQuoteWhatsAppMessage(design, site, form));
+    window.open(url, '_blank', 'noopener');
+    setDone('whatsapp');
   }
 
   return (
@@ -55,10 +76,11 @@ export default function RequestQuoteModal({
         {done ? (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <span className="text-4xl">✅</span>
-            <h3 className="font-display text-lg font-bold text-ink">Request sent</h3>
+            <h3 className="font-display text-lg font-bold text-ink">{done === 'whatsapp' ? 'WhatsApp opened' : 'Request sent'}</h3>
             <p className="text-sm text-ink-faint">
-              Thanks, {form.name.split(' ')[0]}! A SmartTech-trained installer will reach out to {form.phone} shortly
-              with next steps for this system.
+              {done === 'whatsapp'
+                ? `Send the pre-filled message to finish — we've noted your request too, so a SmartTech-trained installer can follow up on ${form.phone} either way.`
+                : `Thanks, ${form.name.split(' ')[0]}! A SmartTech-trained installer will reach out to ${form.phone} shortly with next steps for this system.`}
             </p>
             <button className="btn-primary mt-2" onClick={onClose}>Close</button>
           </div>
@@ -80,9 +102,18 @@ export default function RequestQuoteModal({
 
             {error && <p className="text-xs font-semibold text-rose-600">{error}</p>}
 
-            <button type="submit" disabled={busy} className="btn-accent w-full disabled:opacity-50">
-              {busy ? 'Sending…' : 'Send request'}
-            </button>
+            <div className="flex gap-2">
+              <button type="submit" disabled={busy} className="btn-accent flex-1 disabled:opacity-50">
+                {busy ? 'Sending…' : 'Send request'}
+              </button>
+              <button
+                type="button"
+                onClick={sendViaWhatsApp}
+                className="btn-ghost flex-1 !border-emerald-300 !text-emerald-700 hover:!bg-emerald-50"
+              >
+                💬 WhatsApp
+              </button>
+            </div>
             <p className="text-center text-[10.5px] text-ink-faint">
               We&apos;ll share your contact details and this system&apos;s load profile with a SmartTech installer partner.
             </p>
