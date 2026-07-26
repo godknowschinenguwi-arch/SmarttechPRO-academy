@@ -77,12 +77,18 @@ export default async function AdminPage() {
 
       <section className="card p-6">
         <h2 className="font-display font-bold">Solar Calculator</h2>
-        <div className="mt-4">
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
           <Link
             href="/admin/solar-catalog"
             className="inline-flex items-center gap-2 rounded-xl border border-surface-line bg-surface-soft px-4 py-3 text-sm font-semibold text-ink-soft transition hover:border-brand-300 hover:text-brand-700"
           >
             ⚡ Solar equipment catalog — panels, batteries, inverters, controllers →
+          </Link>
+          <Link
+            href="/admin/solar-leads"
+            className="inline-flex items-center gap-2 rounded-xl border border-surface-line bg-surface-soft px-4 py-3 text-sm font-semibold text-ink-soft transition hover:border-brand-300 hover:text-brand-700"
+          >
+            📋 Solar quote requests →
           </Link>
         </div>
       </section>
