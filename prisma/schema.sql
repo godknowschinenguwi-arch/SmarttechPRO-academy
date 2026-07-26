@@ -217,8 +217,18 @@ CREATE TABLE IF NOT EXISTS SolarController (
   active INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Cloud-saved solar designs, tied to a signed-in account (falls back to
+-- browser localStorage when signed out — see SolarCalculatorApp.tsx).
+CREATE TABLE IF NOT EXISTS SolarDesign (
+  id TEXT PRIMARY KEY, userId TEXT NOT NULL REFERENCES User(id),
+  name TEXT NOT NULL, loads TEXT NOT NULL, site TEXT NOT NULL,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_course_category ON Course(categoryId);
 CREATE INDEX IF NOT EXISTS idx_lesson_module ON Lesson(moduleId);
 CREATE INDEX IF NOT EXISTS idx_enrollment_user ON Enrollment(userId);
 CREATE INDEX IF NOT EXISTS idx_progress_user ON LessonProgress(userId);
 CREATE INDEX IF NOT EXISTS idx_notification_user ON Notification(userId);
+CREATE INDEX IF NOT EXISTS idx_solardesign_user ON SolarDesign(userId);

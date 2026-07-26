@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import SolarCalculatorApp from './SolarCalculatorApp';
 import { getActiveSolarCatalog } from '@/lib/solar/loadCatalog';
+import { currentUser } from '@/lib/auth';
 
 export const metadata: Metadata = {
   title: 'Solar Calculator & System Designer — SmartTech Academy',
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function SolarCalculatorPage() {
-  const catalog = await getActiveSolarCatalog();
+  const [catalog, user] = await Promise.all([getActiveSolarCatalog(), currentUser()]);
 
   return (
     <div className="bg-surface-soft pb-16">
@@ -26,7 +27,7 @@ export default async function SolarCalculatorPage() {
         </div>
       </div>
       <div className="container-x -mt-6 flex flex-col gap-6">
-        <SolarCalculatorApp catalog={catalog} />
+        <SolarCalculatorApp catalog={catalog} signedIn={!!user} />
 
         <Link
           href="/courses/solar-installation-professional"
