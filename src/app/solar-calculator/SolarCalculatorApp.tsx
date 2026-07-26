@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import LoadBuilder from '@/components/solar/LoadBuilder';
 import SiteConfigPanel from '@/components/solar/SiteConfigPanel';
 import SystemDiagram from '@/components/solar/SystemDiagram';
+import SldDiagram from '@/components/solar/SldDiagram';
 import ResultsPanel from '@/components/solar/ResultsPanel';
 import ScenarioCompare from '@/components/solar/ScenarioCompare';
 import ExistingSystemPanel from '@/components/solar/ExistingSystemPanel';
@@ -38,8 +39,9 @@ const TABS = [
   { id: 'loads', label: '1. Loads' },
   { id: 'site', label: '2. Site & system' },
   { id: 'design', label: '3. Design' },
-  { id: 'upgrade', label: '4. Upgrade path' },
-  { id: 'compare', label: '5. Compare' },
+  { id: 'sld', label: '4. Wiring (SLD)' },
+  { id: 'upgrade', label: '5. Upgrade path' },
+  { id: 'compare', label: '6. Compare' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -188,6 +190,7 @@ export default function SolarCalculatorApp({
           <ResultsPanel design={design} site={site} />
         </div>
       )}
+      {tab === 'sld' && <SldDiagram design={design} site={site} />}
       {tab === 'upgrade' && (
         <div className="flex flex-col gap-6">
           <div className="card border-brand-200 bg-brand-50 p-4 text-sm text-brand-800">
