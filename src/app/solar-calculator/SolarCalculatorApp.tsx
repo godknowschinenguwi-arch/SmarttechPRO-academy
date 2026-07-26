@@ -9,6 +9,7 @@ import ScenarioCompare from '@/components/solar/ScenarioCompare';
 import ExistingSystemPanel from '@/components/solar/ExistingSystemPanel';
 import UpgradeResults from '@/components/solar/UpgradeResults';
 import AiAssistant from '@/components/solar/AiAssistant';
+import RequestQuoteModal from '@/components/solar/RequestQuoteModal';
 import { computeSystemDesign, computeUpgradeDesign, defaultSiteConfig, defaultExistingSystem, DEFAULT_CATALOG } from '@/lib/solar/engine';
 import { APPLIANCE_LIBRARY } from '@/lib/solar/appliances';
 import type { LoadItem, Scenario, SolarCatalog } from '@/lib/solar/types';
@@ -61,6 +62,7 @@ export default function SolarCalculatorApp({
   const [scenariosLoading, setScenariosLoading] = useState(signedIn);
   const [scenarioError, setScenarioError] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [quoteOpen, setQuoteOpen] = useState(false);
 
   useEffect(() => {
     if (signedIn) {
@@ -177,9 +179,14 @@ export default function SolarCalculatorApp({
             </button>
           ))}
         </div>
-        <button onClick={exportPdf} disabled={exporting} className="btn-accent">
-          {exporting ? 'Generating…' : '📄 Export PDF proposal'}
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setQuoteOpen(true)} className="btn-primary">
+            📋 Request a quote
+          </button>
+          <button onClick={exportPdf} disabled={exporting} className="btn-accent">
+            {exporting ? 'Generating…' : '📄 Export PDF proposal'}
+          </button>
+        </div>
       </div>
 
       {tab === 'loads' && <LoadBuilder loads={loads} onChange={setLoads} systemType={site.systemType} />}
@@ -218,6 +225,7 @@ export default function SolarCalculatorApp({
       )}
 
       <AiAssistant loads={loads} site={site} catalog={catalog} />
+      {quoteOpen && <RequestQuoteModal loads={loads} site={site} catalog={catalog} onClose={() => setQuoteOpen(false)} />}
     </div>
   );
 }

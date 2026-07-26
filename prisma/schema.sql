@@ -226,9 +226,21 @@ CREATE TABLE IF NOT EXISTS SolarDesign (
   updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- "Request a quote" lead capture from the public calculator — no account
+-- required. Reviewed by admins at /admin/solar-leads.
+CREATE TABLE IF NOT EXISTS SolarLead (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL, phone TEXT NOT NULL, email TEXT, city TEXT, message TEXT,
+  systemType TEXT NOT NULL, totalUsd REAL NOT NULL, arrayWpActual REAL NOT NULL, batteryUsableKwh REAL NOT NULL,
+  loads TEXT NOT NULL, site TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'NEW',
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_course_category ON Course(categoryId);
 CREATE INDEX IF NOT EXISTS idx_lesson_module ON Lesson(moduleId);
 CREATE INDEX IF NOT EXISTS idx_enrollment_user ON Enrollment(userId);
 CREATE INDEX IF NOT EXISTS idx_progress_user ON LessonProgress(userId);
 CREATE INDEX IF NOT EXISTS idx_notification_user ON Notification(userId);
 CREATE INDEX IF NOT EXISTS idx_solardesign_user ON SolarDesign(userId);
+CREATE INDEX IF NOT EXISTS idx_solarlead_status ON SolarLead(status);
