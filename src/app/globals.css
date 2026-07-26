@@ -12,6 +12,23 @@ body {
   @apply bg-surface-soft text-ink antialiased;
 }
 
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #sld-print-area,
+  #sld-print-area * {
+    visibility: visible;
+  }
+  #sld-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none !important;
+  }
+}
+
 @layer components {
   .container-x {
     @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
