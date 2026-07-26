@@ -2,6 +2,7 @@
 // the certificate generator's brand system (blue / orange / ink).
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from 'pdf-lib';
 import QRCode from 'qrcode';
+import { computeFinancing } from './finance';
 import type { DesignResult, SiteConfig } from './types';
 
 const BLUE = rgb(0.08, 0.22, 0.56);
@@ -196,6 +197,58 @@ export async function generateSolarProposalPdf({ design, site, appUrl }: Proposa
   text(p2, 'Redesign / recalculate', W - margin - 70, 32, helv, 7, FAINT);
   text(p2, 'Prepared with SmartTech Solar Calculator', margin, 60, helvBold, 9, INK);
   text(p2, 'Indicative equipment, pricing and sizing — confirm with a licensed installer before purchase.', margin, 46, helv, 7.5, FAINT);
+
+  // ---------- Page 3: Financing (only when the client wants to compare against a loan) ----------
+  if (site.financingEnabled) {
+    const financing = computeFinancing(design.totalUsd, design.estMonthlySavingsUsd, site);
+    const p3 = pdf.addPage([W, H]);
+    p3.drawRectangle({ x: 0, y: 0, width: W, height: H, color: PAPER });
+    p3.drawRectangle({ x: 0, y: H - 60, width: W, height: 60, color: BLUE });
+    text(p3, 'Financing vs. Staying on the Grid', margin, H - 38, helvBold, 16, PAPER);
+
+    let fy = H - 100;
+    const finCardW = (W - margin * 2 - 24) / 4;
+    const netPositive = financing.netPositionOverTermUsd >= 0;
+    const finCards: [string, string][] = [
+      ['Down payment', money(site.downPaymentUsd)],
+      ['Monthly payment', money(financing.monthlyPaymentUsd)],
+      ['Total interest', money(financing.totalInterestUsd)],
+      [netPositive ? 'Net savings vs. grid' : 'Net cost vs. grid', money(Math.abs(financing.netPositionOverTermUsd))],
+    ];
+    finCards.forEach(([label, value], i) => {
+      const x = margin + i * (finCardW + 8);
+      p3.drawRectangle({ x, y: fy - 60, width: finCardW, height: 60, borderColor: rgb(0.89, 0.92, 0.95), borderWidth: 1, color: PAPER });
+      text(p3, value, x + 10, fy - 28, helvBold, 14, i === 3 ? (netPositive ? rgb(0.03, 0.5, 0.32) : rgb(0.77, 0.15, 0.15)) : BLUE);
+      text(p3, label.toUpperCase(), x + 10, fy - 46, helv, 7, FAINT);
+    });
+
+    fy -= 100;
+    text(p3, 'Loan summary', margin, fy, helvBold, 12, INK);
+    fy -= 22;
+    const loanRows: [string, string][] = [
+      ['System cost', money(design.totalUsd)],
+      ['Down payment', money(site.downPaymentUsd)],
+      ['Amount financed', money(financing.principal)],
+      ['Loan term', `${site.loanTermYears} year${site.loanTermYears !== 1 ? 's' : ''} (${financing.months} months)`],
+      ['Annual interest rate', `${site.loanInterestRatePct}%`],
+      ['Monthly repayment', money(financing.monthlyPaymentUsd)],
+      ['Total repaid', money(financing.totalRepaymentUsd)],
+      ['Est. monthly solar savings', money(design.estMonthlySavingsUsd)],
+      ['Net monthly cash flow', `${financing.monthlyCashFlowUsd < 0 ? '-' : '+'}${money(Math.abs(financing.monthlyCashFlowUsd))}`],
+    ];
+    loanRows.forEach(([k, v]) => {
+      text(p3, k, margin, fy, helv, 9.5, FAINT);
+      text(p3, v, margin + 260, fy, helvBold, 9.5, INK);
+      fy -= 18;
+    });
+
+    fy -= 20;
+    p3.drawRectangle({ x: margin, y: fy - 60, width: W - margin * 2, height: 60, color: SOFT });
+    text(p3, `Over ${site.loanTermYears} year${site.loanTermYears !== 1 ? 's' : ''}, staying on the grid at $${site.monthlyGridBillUsd}/month would cost`, margin + 12, fy - 22, helv, 9.5, INK);
+    text(p3, `approximately ${money(financing.gridCostOverTermUsd)}, versus ${money(site.downPaymentUsd + financing.totalRepaymentUsd)} to own this system outright.`, margin + 12, fy - 38, helv, 9.5, INK);
+
+    text(p3, 'Indicative only — not a credit offer or financial advice. Confirm actual rates and terms with your lender.', margin, 40, helv, 7.5, FAINT);
+  }
 
   pdf.setTitle(`SmartTech Solar Proposal — ${site.clientName || 'Design'}`);
   pdf.setAuthor('SmartTech Academy');
