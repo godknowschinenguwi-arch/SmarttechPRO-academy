@@ -12,6 +12,8 @@ import AiAssistant from '@/components/solar/AiAssistant';
 import RequestQuoteModal from '@/components/solar/RequestQuoteModal';
 import { computeSystemDesign, computeUpgradeDesign, defaultSiteConfig, defaultExistingSystem, DEFAULT_CATALOG } from '@/lib/solar/engine';
 import { APPLIANCE_LIBRARY } from '@/lib/solar/appliances';
+import { buildQuoteWhatsAppMessage } from '@/lib/solar/whatsapp';
+import { whatsappLink } from '@/lib/contact';
 import type { LoadItem, Scenario, SolarCatalog } from '@/lib/solar/types';
 
 const STORAGE_KEY = 'sta_solar_scenarios_v1';
@@ -179,7 +181,15 @@ export default function SolarCalculatorApp({
             </button>
           ))}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={whatsappLink(buildQuoteWhatsAppMessage(design, site))}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-ghost !border-emerald-300 !text-emerald-700 hover:!bg-emerald-50"
+          >
+            💬 WhatsApp
+          </a>
           <button onClick={() => setQuoteOpen(true)} className="btn-primary">
             📋 Request a quote
           </button>
@@ -225,7 +235,7 @@ export default function SolarCalculatorApp({
       )}
 
       <AiAssistant loads={loads} site={site} catalog={catalog} />
-      {quoteOpen && <RequestQuoteModal loads={loads} site={site} catalog={catalog} onClose={() => setQuoteOpen(false)} />}
+      {quoteOpen && <RequestQuoteModal loads={loads} site={site} catalog={catalog} design={design} onClose={() => setQuoteOpen(false)} />}
     </div>
   );
 }

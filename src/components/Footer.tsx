@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { whatsappLink } from '@/lib/contact';
 
 export default function Footer() {
   return (
@@ -14,7 +15,16 @@ export default function Footer() {
           </p>
           <div className="mt-4 flex gap-3 text-white/70">
             {['Facebook', 'YouTube', 'WhatsApp', 'LinkedIn'].map((s) => (
-              <a key={s} href="#" aria-label={s} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold hover:bg-white/20">{s}</a>
+              <a
+                key={s}
+                href={s === 'WhatsApp' ? whatsappLink('Hi SmartTech Academy!') : '#'}
+                target={s === 'WhatsApp' ? '_blank' : undefined}
+                rel={s === 'WhatsApp' ? 'noopener noreferrer' : undefined}
+                aria-label={s}
+                className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold hover:bg-white/20"
+              >
+                {s}
+              </a>
             ))}
           </div>
         </div>
