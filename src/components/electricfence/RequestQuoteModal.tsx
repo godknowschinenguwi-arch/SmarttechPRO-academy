@@ -2,17 +2,19 @@
 import { useState } from 'react';
 import { whatsappLink } from '@/lib/contact';
 import { buildFenceWhatsAppMessage } from '@/lib/electricfence/whatsapp';
-import type { FenceDesignResult, FenceZone, FenceConfig } from '@/lib/electricfence/types';
+import type { FenceDesignResult, FenceZone, FenceConfig, FenceCatalog } from '@/lib/electricfence/types';
 
 export default function RequestQuoteModal({
   zones,
   config,
   design,
+  catalog,
   onClose,
 }: {
   zones: FenceZone[];
   config: FenceConfig;
   design: FenceDesignResult;
+  catalog: FenceCatalog;
   onClose: () => void;
 }) {
   const [form, setForm] = useState({ name: config.clientName || '', phone: '', email: '', city: '', message: '' });
@@ -37,7 +39,7 @@ export default function RequestQuoteModal({
     const res = await fetch('/api/electricfence/leads', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, zones, config }),
+      body: JSON.stringify({ ...form, zones, config, catalog }),
     });
     return res.ok;
   }

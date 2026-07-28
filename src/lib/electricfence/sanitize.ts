@@ -2,9 +2,10 @@
 // client sends back its full zones/config state, so every field is treated
 // as untrusted input.
 import { defaultFenceConfig } from './engine';
-import type { FenceZone, FenceConfig } from './types';
+import type { FenceZone, FenceConfig, FenceCatalog, CatalogEnergizer, CatalogWire, CatalogPost, CatalogMonitor, CatalogBackupBattery } from './types';
 
 const MAX_ZONES = 100;
+const MAX_CATALOG_ITEMS = 100;
 
 export function sanitizeZones(input: unknown): FenceZone[] {
   if (!Array.isArray(input)) return [];
@@ -38,4 +39,79 @@ export function sanitizeFenceConfig(input: unknown): FenceConfig {
     siteName: typeof c.siteName === 'string' ? c.siteName.slice(0, 120) : d.siteName,
     notes: typeof c.notes === 'string' ? c.notes.slice(0, 600) : d.notes,
   };
+}
+
+function num(v: unknown, fallback = 0): number {
+  return Number.isFinite(v as number) ? Number(v) : fallback;
+}
+function str(v: unknown, fallback: string, maxLen = 80): string {
+  return typeof v === 'string' && v.trim() ? v.slice(0, maxLen) : fallback;
+}
+
+// The client passes back the catalog it rendered with (fetched server-side on
+// page load), so PDF/lead/assistant numbers match what's on screen. Returns
+// undefined when absent/malformed so callers fall back to the default catalog.
+export function sanitizeFenceCatalog(input: unknown): FenceCatalog | undefined {
+  if (!input || typeof input !== 'object') return undefined;
+  const c = input as Partial<Record<keyof FenceCatalog, unknown>>;
+
+  const energizers: CatalogEnergizer[] = Array.isArray(c.energizers)
+    ? c.energizers.slice(0, MAX_CATALOG_ITEMS).map((raw, i) => {
+        const e = raw as Partial<CatalogEnergizer>;
+        const voltageOptions = Array.isArray(e.voltageOptions)
+          ? e.voltageOptions.filter((v): v is CatalogEnergizer['voltageOptions'][number] => v === 12 || v === 24)
+          : [];
+        return {
+          id: str(e.id, `energizer-${i}`, 40), brand: str(e.brand, 'Energizer'), model: str(e.model, 'Energizer'),
+          joulesOutput: num(e.joulesOutput, 1), maxFenceKm: num(e.maxFenceKm, 1), currentDrawA: num(e.currentDrawA, 0.1),
+          voltageOptions: voltageOptions.length ? voltageOptions : [12], priceUsd: num(e.priceUsd),
+        };
+      })
+    : [];
+
+  const wires: CatalogWire[] = Array.isArray(c.wires)
+    ? c.wires.slice(0, MAX_CATALOG_ITEMS).map((raw, i) => {
+        const w = raw as Partial<CatalogWire>;
+        return {
+          id: str(w.id, `wire-${i}`, 40), brand: str(w.brand, 'Wire'), model: str(w.model, 'Wire'),
+          type: w.type === 'BRAIDED_WIRE' ? 'BRAIDED_WIRE' : 'HT_WIRE',
+          ohmsPerKm: num(w.ohmsPerKm), spoolLengthM: num(w.spoolLengthM, 1), priceUsdPerSpool: num(w.priceUsdPerSpool),
+        };
+      })
+    : [];
+
+  const posts: CatalogPost[] = Array.isArray(c.posts)
+    ? c.posts.slice(0, MAX_CATALOG_ITEMS).map((raw, i) => {
+        const p = raw as Partial<CatalogPost>;
+        return {
+          id: str(p.id, `post-${i}`, 40), brand: str(p.brand, 'Post'), model: str(p.model, 'Post'),
+          material: (['STEEL', 'TIMBER', 'CONCRETE'] as string[]).includes(p.material ?? '') ? (p.material as CatalogPost['material']) : 'STEEL',
+          heightM: num(p.heightM, 1.8), priceUsd: num(p.priceUsd),
+        };
+      })
+    : [];
+
+  const monitors: CatalogMonitor[] = Array.isArray(c.monitors)
+    ? c.monitors.slice(0, MAX_CATALOG_ITEMS).map((raw, i) => {
+        const m = raw as Partial<CatalogMonitor>;
+        return {
+          id: str(m.id, `monitor-${i}`, 40), brand: str(m.brand, 'Monitor'), model: str(m.model, 'Monitor'),
+          maxZones: num(m.maxZones, 4), gsmCapable: !!m.gsmCapable, priceUsd: num(m.priceUsd),
+        };
+      })
+    : [];
+
+  const batteries: CatalogBackupBattery[] = Array.isArray(c.batteries)
+    ? c.batteries.slice(0, MAX_CATALOG_ITEMS).map((raw, i) => {
+        const b = raw as Partial<CatalogBackupBattery>;
+        const voltage = b.voltage === 24 ? 24 : 12;
+        return {
+          id: str(b.id, `battery-${i}`, 40), brand: str(b.brand, 'Battery'), model: str(b.model, 'Battery'),
+          voltage, ah: num(b.ah, 1), priceUsd: num(b.priceUsd),
+        };
+      })
+    : [];
+
+  if (!energizers.length || !wires.length || !posts.length) return undefined;
+  return { energizers, wires, posts, monitors, batteries };
 }

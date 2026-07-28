@@ -8,7 +8,7 @@ import ResultsPanel from '@/components/solar/ResultsPanel';
 import ScenarioCompare from '@/components/solar/ScenarioCompare';
 import ExistingSystemPanel from '@/components/solar/ExistingSystemPanel';
 import UpgradeResults from '@/components/solar/UpgradeResults';
-import AiAssistant from '@/components/solar/AiAssistant';
+import AiAssistantWidget from '@/components/AiAssistantWidget';
 import RequestQuoteModal from '@/components/solar/RequestQuoteModal';
 import { computeSystemDesign, computeUpgradeDesign, defaultSiteConfig, defaultExistingSystem, DEFAULT_CATALOG } from '@/lib/solar/engine';
 import { APPLIANCE_LIBRARY } from '@/lib/solar/appliances';
@@ -234,7 +234,13 @@ export default function SolarCalculatorApp({
         />
       )}
 
-      <AiAssistant loads={loads} site={site} catalog={catalog} />
+      <AiAssistantWidget
+        apiPath="/api/solar/assistant"
+        payload={{ loads, site, catalog }}
+        title="SmartTech Solar Assistant"
+        subtitle="Ask about your current design"
+        starterPrompts={['Why do I need this many panels?', 'What if I add air conditioning?', 'Is my battery bank big enough?']}
+      />
       {quoteOpen && <RequestQuoteModal loads={loads} site={site} catalog={catalog} design={design} onClose={() => setQuoteOpen(false)} />}
     </div>
   );

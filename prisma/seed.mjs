@@ -122,6 +122,100 @@ async function backfillSolarCatalog() {
   console.log('Solar equipment catalog seeded.');
 }
 
+// Electric Fence Calculator equipment catalog — same seed-once-if-empty pattern.
+const FENCE_ENERGIZERS = [
+  { brand: 'Nemtek', model: 'Alpha AS1000 (1J)', joulesOutput: 1, maxFenceKm: 4, currentDrawA: 0.1, voltageOptions: J([12]), priceUsd: 75 },
+  { brand: 'Nemtek', model: 'AS3000 (3J)', joulesOutput: 3, maxFenceKm: 10, currentDrawA: 0.15, voltageOptions: J([12]), priceUsd: 145 },
+  { brand: 'Stafix', model: 'X6 (6J)', joulesOutput: 6, maxFenceKm: 20, currentDrawA: 0.2, voltageOptions: J([12]), priceUsd: 260 },
+  { brand: 'Nemtek', model: 'AS10000 (10J)', joulesOutput: 10, maxFenceKm: 30, currentDrawA: 0.28, voltageOptions: J([12, 24]), priceUsd: 420 },
+  { brand: 'Stafix', model: 'XM10 (15J)', joulesOutput: 15, maxFenceKm: 45, currentDrawA: 0.35, voltageOptions: J([12, 24]), priceUsd: 650 },
+];
+const FENCE_WIRES = [
+  { brand: 'Cyclone', model: '2.5mm Galvanised High-Tensile', type: 'HT_WIRE', ohmsPerKm: 2.0, spoolLengthM: 500, priceUsdPerSpool: 45 },
+  { brand: 'Nemtek', model: '6-Strand Conductive Braid', type: 'BRAIDED_WIRE', ohmsPerKm: 15, spoolLengthM: 200, priceUsdPerSpool: 38 },
+];
+const FENCE_POSTS = [
+  { brand: 'SmartTech', model: 'Steel Y-Standard 1.8m', material: 'STEEL', heightM: 1.8, priceUsd: 6.5 },
+  { brand: 'SmartTech', model: 'Treated Gum Pole 2.1m', material: 'TIMBER', heightM: 2.1, priceUsd: 4.2 },
+  { brand: 'SmartTech', model: 'Precast Concrete 2.1m', material: 'CONCRETE', heightM: 2.1, priceUsd: 9.8 },
+];
+const FENCE_MONITORS = [
+  { brand: 'Nemtek', model: '4-Zone LCD Monitor', maxZones: 4, gsmCapable: false, priceUsd: 180 },
+  { brand: 'Nemtek', model: '8-Zone LCD Monitor + GSM', maxZones: 8, gsmCapable: true, priceUsd: 340 },
+  { brand: 'Stafix', model: '16-Zone Monitor + GSM + Siren', maxZones: 16, gsmCapable: true, priceUsd: 520 },
+];
+const FENCE_BATTERIES = [
+  { brand: 'SmartTech Power', model: 'SLA 12V 7Ah', voltage: 12, ah: 7, priceUsd: 22 },
+  { brand: 'SmartTech Power', model: 'SLA 12V 18Ah', voltage: 12, ah: 18, priceUsd: 42 },
+  { brand: 'SmartTech Power', model: 'SLA 12V 38Ah', voltage: 12, ah: 38, priceUsd: 78 },
+];
+
+async function backfillFenceCatalog() {
+  const tables = [
+    ['FenceEnergizer', FENCE_ENERGIZERS],
+    ['FenceWire', FENCE_WIRES],
+    ['FencePost', FENCE_POSTS],
+    ['FenceMonitor', FENCE_MONITORS],
+    ['FenceBattery', FENCE_BATTERIES],
+  ];
+  for (const [table, rows] of tables) {
+    const existing = await db.execute(`SELECT COUNT(*) AS n FROM ${table}`);
+    if (Number(existing.rows[0].n) > 0) continue;
+    for (const row of rows) await ins(table, { ...row, active: true });
+  }
+  console.log('Electric fence equipment catalog seeded.');
+}
+
+// CCTV Calculator equipment catalog — same seed-once-if-empty pattern.
+const CCTV_CAMERAS = [
+  { brand: 'Hikvision', model: 'DS-2CD1123G0 Dome 2MP', type: 'DOME', environment: 'INDOOR', resolutionMp: 2, lowLight: false, poeWatts: 6, priceUsd: 38 },
+  { brand: 'Hikvision', model: 'DS-2CD1143G0 Dome 4MP', type: 'DOME', environment: 'INDOOR', resolutionMp: 4, lowLight: false, poeWatts: 7, priceUsd: 52 },
+  { brand: 'Dahua', model: 'IPC-HDW2439 Turret 4MP', type: 'TURRET', environment: 'OUTDOOR', resolutionMp: 4, lowLight: false, poeWatts: 7, priceUsd: 55 },
+  { brand: 'Dahua', model: 'IPC-HFW2439 Bullet 4MP', type: 'BULLET', environment: 'OUTDOOR', resolutionMp: 4, lowLight: false, poeWatts: 8, priceUsd: 58 },
+  { brand: 'Dahua', model: 'IPC-HFW2439S Starlight 4MP', type: 'BULLET', environment: 'OUTDOOR', resolutionMp: 4, lowLight: true, poeWatts: 9, priceUsd: 78 },
+  { brand: 'Hikvision', model: 'DS-2CD2T87 Bullet 8MP (4K)', type: 'BULLET', environment: 'OUTDOOR', resolutionMp: 8, lowLight: false, poeWatts: 10, priceUsd: 110 },
+  { brand: 'Hikvision', model: 'DS-2DE4425 PTZ 4MP', type: 'PTZ', environment: 'OUTDOOR', resolutionMp: 4, lowLight: false, poeWatts: 30, priceUsd: 420 },
+];
+const CCTV_NVRS = [
+  { brand: 'Hikvision', model: 'DS-7604NI-K1 4CH PoE', channels: 4, poePorts: 4, poeBudgetW: 48, maxHddBays: 1, priceUsd: 95 },
+  { brand: 'Hikvision', model: 'DS-7608NI-K2 8CH PoE', channels: 8, poePorts: 8, poeBudgetW: 96, maxHddBays: 2, priceUsd: 175 },
+  { brand: 'Dahua', model: 'NVR4216-16P 16CH PoE', channels: 16, poePorts: 16, poeBudgetW: 150, maxHddBays: 2, priceUsd: 320 },
+  { brand: 'Dahua', model: 'NVR5432-16P 32CH', channels: 32, poePorts: 16, poeBudgetW: 200, maxHddBays: 4, priceUsd: 650 },
+  { brand: 'Dahua', model: 'XVR1B04 4CH Analog', channels: 4, poePorts: 0, poeBudgetW: 0, maxHddBays: 1, priceUsd: 65 },
+  { brand: 'Dahua', model: 'XVR1B08 8CH Analog', channels: 8, poePorts: 0, poeBudgetW: 0, maxHddBays: 1, priceUsd: 110 },
+];
+const CCTV_HDDS = [
+  { brand: 'Seagate SkyHawk', model: '1TB Surveillance', capacityTb: 1, priceUsd: 48 },
+  { brand: 'Seagate SkyHawk', model: '2TB Surveillance', capacityTb: 2, priceUsd: 65 },
+  { brand: 'Seagate SkyHawk', model: '4TB Surveillance', capacityTb: 4, priceUsd: 110 },
+  { brand: 'Seagate SkyHawk', model: '8TB Surveillance', capacityTb: 8, priceUsd: 195 },
+];
+const CCTV_CABLES = [
+  { brand: 'SmartTech', model: 'Cat6 UTP Outdoor', type: 'CAT6', spoolLengthM: 305, priceUsdPerSpool: 75 },
+  { brand: 'SmartTech', model: 'RG59 Coax + Power (Siamese)', type: 'COAX_POWER', spoolLengthM: 305, priceUsdPerSpool: 95 },
+];
+const CCTV_POE_SWITCHES = [
+  { brand: 'TP-Link', model: 'TL-SG1008P 8-Port PoE', ports: 8, poeBudgetW: 124, priceUsd: 85 },
+  { brand: 'TP-Link', model: 'TL-SG1016PE 16-Port PoE', ports: 16, poeBudgetW: 150, priceUsd: 180 },
+  { brand: 'Ubiquiti', model: 'USW-24-PoE 24-Port', ports: 24, poeBudgetW: 400, priceUsd: 420 },
+];
+
+async function backfillCctvCatalog() {
+  const tables = [
+    ['CctvCamera', CCTV_CAMERAS],
+    ['CctvNvr', CCTV_NVRS],
+    ['CctvHdd', CCTV_HDDS],
+    ['CctvCable', CCTV_CABLES],
+    ['CctvPoeSwitch', CCTV_POE_SWITCHES],
+  ];
+  for (const [table, rows] of tables) {
+    const existing = await db.execute(`SELECT COUNT(*) AS n FROM ${table}`);
+    if (Number(existing.rows[0].n) > 0) continue;
+    for (const row of rows) await ins(table, { ...row, active: true });
+  }
+  console.log('CCTV equipment catalog seeded.');
+}
+
 // Replaces placeholder lesson content, quiz questions and assignment briefs
 // with the real material from the companion book (see prisma/content.mjs).
 // Runs unconditionally — like backfillCovers() above — so it safely updates
@@ -171,6 +265,8 @@ async function main() {
   await backfillCovers();
   await backfillComingSoon();
   await backfillSolarCatalog();
+  await backfillFenceCatalog();
+  await backfillCctvCatalog();
 
   const existing = await db.execute('SELECT COUNT(*) AS n FROM User');
   if (Number(existing.rows[0].n) > 0) {

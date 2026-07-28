@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import ElectricFenceCalculatorApp from './ElectricFenceCalculatorApp';
+import { getActiveFenceCatalog } from '@/lib/electricfence/loadCatalog';
+import { currentUser } from '@/lib/auth';
 
 export const metadata: Metadata = {
   title: 'Electric Fence Calculator & System Designer — SmartTech Academy',
@@ -8,7 +10,9 @@ export const metadata: Metadata = {
     'Pro-grade electric fence sizing tool: build a zone/perimeter profile, size the energizer, wire, posts and monitoring against a live equipment catalogue, and export a branded proposal.',
 };
 
-export default function ElectricFenceCalculatorPage() {
+export default async function ElectricFenceCalculatorPage() {
+  const [catalog, user] = await Promise.all([getActiveFenceCatalog(), currentUser()]);
+
   return (
     <div className="bg-surface-soft pb-16">
       <div className="bg-gradient-to-br from-brand-800 via-brand-700 to-brand-900 py-12 text-white">
@@ -22,7 +26,7 @@ export default function ElectricFenceCalculatorPage() {
         </div>
       </div>
       <div className="container-x -mt-6 flex flex-col gap-6">
-        <ElectricFenceCalculatorApp />
+        <ElectricFenceCalculatorApp catalog={catalog} signedIn={!!user} />
 
         <Link
           href="/courses/electric-fence-installation"

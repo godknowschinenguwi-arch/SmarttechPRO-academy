@@ -266,6 +266,84 @@ CREATE TABLE IF NOT EXISTS OrganizationMember (
   UNIQUE (organizationId, userId)
 );
 
+-- Electric Fence Calculator equipment catalog — admin-editable via /admin/fence-catalog.
+CREATE TABLE IF NOT EXISTS FenceEnergizer (
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL,
+  joulesOutput REAL NOT NULL, maxFenceKm REAL NOT NULL, currentDrawA REAL NOT NULL,
+  voltageOptions TEXT NOT NULL, priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS FenceWire (
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, type TEXT NOT NULL,
+  ohmsPerKm REAL NOT NULL, spoolLengthM REAL NOT NULL, priceUsdPerSpool REAL NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS FencePost (
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, material TEXT NOT NULL,
+  heightM REAL NOT NULL, priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS FenceMonitor (
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, maxZones REAL NOT NULL,
+  gsmCapable INTEGER NOT NULL DEFAULT 0, priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS FenceBattery (
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, voltage REAL NOT NULL,
+  ah REAL NOT NULL, priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Cloud-saved Electric Fence designs, tied to a signed-in account.
+CREATE TABLE IF NOT EXISTS FenceDesign (
+  id TEXT PRIMARY KEY, userId TEXT NOT NULL REFERENCES User(id),
+  name TEXT NOT NULL, zones TEXT NOT NULL, config TEXT NOT NULL,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- CCTV Calculator equipment catalog — admin-editable via /admin/cctv-catalog.
+CREATE TABLE IF NOT EXISTS CctvCamera (
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, type TEXT NOT NULL, environment TEXT NOT NULL,
+  resolutionMp REAL NOT NULL, lowLight INTEGER NOT NULL DEFAULT 0, poeWatts REAL NOT NULL,
+  priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS CctvNvr (
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, channels REAL NOT NULL,
+  poePorts REAL NOT NULL, poeBudgetW REAL NOT NULL, maxHddBays REAL NOT NULL,
+  priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS CctvHdd (
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, capacityTb REAL NOT NULL,
+  priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS CctvCable (
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, type TEXT NOT NULL,
+  spoolLengthM REAL NOT NULL, priceUsdPerSpool REAL NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS CctvPoeSwitch (
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, ports REAL NOT NULL,
+  poeBudgetW REAL NOT NULL, priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Cloud-saved CCTV designs, tied to a signed-in account.
+CREATE TABLE IF NOT EXISTS CctvDesign (
+  id TEXT PRIMARY KEY, userId TEXT NOT NULL REFERENCES User(id),
+  name TEXT NOT NULL, points TEXT NOT NULL, config TEXT NOT NULL,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_course_category ON Course(categoryId);
 CREATE INDEX IF NOT EXISTS idx_lesson_module ON Lesson(moduleId);
 CREATE INDEX IF NOT EXISTS idx_enrollment_user ON Enrollment(userId);
@@ -277,3 +355,5 @@ CREATE INDEX IF NOT EXISTS idx_lead_status ON Lead(status);
 CREATE INDEX IF NOT EXISTS idx_lead_claimedby ON Lead(claimedByUserId);
 CREATE INDEX IF NOT EXISTS idx_orgmember_org ON OrganizationMember(organizationId);
 CREATE INDEX IF NOT EXISTS idx_orgmember_user ON OrganizationMember(userId);
+CREATE INDEX IF NOT EXISTS idx_fencedesign_user ON FenceDesign(userId);
+CREATE INDEX IF NOT EXISTS idx_cctvdesign_user ON CctvDesign(userId);

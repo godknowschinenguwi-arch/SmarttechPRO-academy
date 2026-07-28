@@ -1,17 +1,9 @@
 'use client';
 import { useState } from 'react';
+import CatalogTable, { type ColumnSpec, type WithMeta } from './CatalogTable';
 import type { CatalogPanel, CatalogBattery, CatalogInverter, CatalogController } from '@/lib/solar/types';
 
 type Kind = 'panel' | 'battery' | 'inverter' | 'controller';
-type WithMeta<T> = T & { active: boolean };
-
-interface ColumnSpec<T> {
-  key: keyof T;
-  label: string;
-  type: 'text' | 'number' | 'select' | 'checkbox';
-  options?: string[];
-  step?: number;
-}
 
 const PANEL_COLUMNS: ColumnSpec<Omit<CatalogPanel, 'id'>>[] = [
   { key: 'brand', label: 'Brand', type: 'text' },
@@ -88,6 +80,7 @@ export default function SolarCatalogManager({
   controllers: WithMeta<CatalogController>[];
 }) {
   const [tab, setTab] = useState<Kind>('panel');
+  const API_BASE = '/api/admin/solar-catalog';
 
   return (
     <div className="flex flex-col gap-4">
@@ -105,169 +98,10 @@ export default function SolarCatalogManager({
         ))}
       </div>
 
-      {tab === 'panel' && <CatalogTable kind="panel" columns={PANEL_COLUMNS} initialRows={panels} emptyRow={emptyPanel()} />}
-      {tab === 'battery' && <CatalogTable kind="battery" columns={BATTERY_COLUMNS} initialRows={batteries} emptyRow={emptyBattery()} />}
-      {tab === 'inverter' && <CatalogTable kind="inverter" columns={INVERTER_COLUMNS} initialRows={inverters} emptyRow={emptyInverter()} />}
-      {tab === 'controller' && <CatalogTable kind="controller" columns={CONTROLLER_COLUMNS} initialRows={controllers} emptyRow={emptyController()} />}
-    </div>
-  );
-}
-
-function CatalogTable<T extends Record<string, unknown>>({
-  kind,
-  columns,
-  initialRows,
-  emptyRow,
-}: {
-  kind: Kind;
-  columns: ColumnSpec<T>[];
-  initialRows: WithMeta<T & { id: string }>[];
-  emptyRow: T;
-}) {
-  const [rows, setRows] = useState(initialRows);
-  const [draft, setDraft] = useState<T>(emptyRow);
-  const [busy, setBusy] = useState<string | null>(null);
-
-  function patchRowLocal(id: string, fields: Record<string, unknown>) {
-    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...fields } : r)));
-  }
-
-  async function save(id: string, fields: Record<string, unknown>) {
-    setBusy(id);
-    try {
-      const res = await fetch(`/api/admin/solar-catalog/${kind}/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(fields),
-      });
-      if (!res.ok) {
-        alert('Could not save changes.');
-        return;
-      }
-      patchRowLocal(id, fields);
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function remove(id: string) {
-    if (!confirm('Delete this item permanently? This cannot be undone.')) return;
-    setBusy(id);
-    try {
-      const res = await fetch(`/api/admin/solar-catalog/${kind}/${id}`, { method: 'DELETE' });
-      if (!res.ok) {
-        alert('Could not delete item.');
-        return;
-      }
-      setRows((rs) => rs.filter((r) => r.id !== id));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function addNew() {
-    setBusy('new');
-    try {
-      const res = await fetch(`/api/admin/solar-catalog/${kind}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(draft),
-      });
-      if (!res.ok) {
-        alert('Could not add item — check the fields and try again.');
-        return;
-      }
-      const { id } = await res.json();
-      setRows((rs) => [...rs, { id, active: true, ...draft } as WithMeta<T & { id: string }>]);
-      setDraft(emptyRow);
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  function renderInput(
-    col: ColumnSpec<T>,
-    value: unknown,
-    onChange: (v: unknown) => void
-  ) {
-    if (col.type === 'checkbox') {
-      return <input type="checkbox" checked={!!value} onChange={(e) => onChange(e.target.checked)} className="h-4 w-4 accent-brand-600" />;
-    }
-    if (col.type === 'select') {
-      return (
-        <select className="input !py-1.5 text-xs" value={String(value)} onChange={(e) => onChange(e.target.value)}>
-          {col.options?.map((o) => (
-            <option key={o} value={o}>{o}</option>
-          ))}
-        </select>
-      );
-    }
-    return (
-      <input
-        type={col.type}
-        step={col.step ?? 1}
-        className="input !py-1.5 text-xs"
-        value={value as string | number}
-        onChange={(e) => onChange(col.type === 'number' ? Number(e.target.value) : e.target.value)}
-      />
-    );
-  }
-
-  return (
-    <div className="card overflow-x-auto">
-      <table className="w-full min-w-[900px] text-sm">
-        <thead>
-          <tr className="border-b border-surface-line bg-surface-soft text-left text-[11px] font-bold uppercase tracking-wide text-ink-faint">
-            {columns.map((c) => (
-              <th key={String(c.key)} className="px-3 py-2">{c.label}</th>
-            ))}
-            <th className="px-3 py-2">Active</th>
-            <th className="px-3 py-2" />
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-surface-line">
-          {rows.map((row) => (
-            <tr key={row.id} className={row.active ? '' : 'opacity-50'}>
-              {columns.map((c) => (
-                <td key={String(c.key)} className="px-3 py-2">
-                  {renderInput(c, row[c.key], (v) => save(row.id, { [c.key]: v }))}
-                </td>
-              ))}
-              <td className="px-3 py-2">
-                <input
-                  type="checkbox"
-                  checked={row.active}
-                  onChange={(e) => save(row.id, { active: e.target.checked })}
-                  className="h-4 w-4 accent-emerald-600"
-                />
-              </td>
-              <td className="px-3 py-2">
-                <button
-                  onClick={() => remove(row.id)}
-                  disabled={busy === row.id}
-                  className="text-xs font-bold text-rose-600 hover:underline disabled:opacity-40"
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
-
-          <tr className="bg-brand-50/40">
-            {columns.map((c) => (
-              <td key={String(c.key)} className="px-3 py-2">
-                {renderInput(c, draft[c.key], (v) => setDraft((d) => ({ ...d, [c.key]: v })))}
-              </td>
-            ))}
-            <td className="px-3 py-2 text-xs text-ink-faint">—</td>
-            <td className="px-3 py-2">
-              <button onClick={addNew} disabled={busy === 'new'} className="btn-primary !px-3 !py-1.5 text-xs disabled:opacity-40">
-                Add
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      {tab === 'panel' && <CatalogTable apiBase={`${API_BASE}/panel`} columns={PANEL_COLUMNS} initialRows={panels} emptyRow={emptyPanel()} />}
+      {tab === 'battery' && <CatalogTable apiBase={`${API_BASE}/battery`} columns={BATTERY_COLUMNS} initialRows={batteries} emptyRow={emptyBattery()} />}
+      {tab === 'inverter' && <CatalogTable apiBase={`${API_BASE}/inverter`} columns={INVERTER_COLUMNS} initialRows={inverters} emptyRow={emptyInverter()} />}
+      {tab === 'controller' && <CatalogTable apiBase={`${API_BASE}/controller`} columns={CONTROLLER_COLUMNS} initialRows={controllers} emptyRow={emptyController()} />}
     </div>
   );
 }
