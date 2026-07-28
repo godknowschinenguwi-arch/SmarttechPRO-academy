@@ -99,6 +99,14 @@ export interface CctvWarning {
   message: string;
 }
 
+export interface CctvScenario {
+  id: string;
+  name: string;
+  createdAt: string;
+  points: CameraPoint[];
+  config: CctvConfig;
+}
+
 export interface CctvDesignResult {
   cameraCount: number;
   cameraLines: { camera: CatalogCamera; qty: number }[];

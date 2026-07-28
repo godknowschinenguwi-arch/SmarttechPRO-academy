@@ -1,30 +1,115 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ZoneBuilder from '@/components/electricfence/ZoneBuilder';
 import FenceConfigPanel from '@/components/electricfence/FenceConfigPanel';
 import FenceResultsPanel from '@/components/electricfence/FenceResultsPanel';
+import ScenarioCompare from '@/components/electricfence/ScenarioCompare';
 import RequestQuoteModal from '@/components/electricfence/RequestQuoteModal';
-import { computeFenceDesign, defaultFenceConfig, defaultFenceZones } from '@/lib/electricfence/engine';
+import AiAssistantWidget from '@/components/AiAssistantWidget';
+import { computeFenceDesign, defaultFenceConfig, defaultFenceZones, DEFAULT_FENCE_CATALOG } from '@/lib/electricfence/engine';
 import { buildFenceWhatsAppMessage } from '@/lib/electricfence/whatsapp';
 import { whatsappLink } from '@/lib/contact';
-import type { FenceZone } from '@/lib/electricfence/types';
+import type { FenceZone, FenceScenario, FenceCatalog } from '@/lib/electricfence/types';
+
+const STORAGE_KEY = 'sta_fence_scenarios_v1';
 
 const TABS = [
   { id: 'zones', label: '1. Zones' },
   { id: 'config', label: '2. Fence & power' },
   { id: 'design', label: '3. Design' },
+  { id: 'compare', label: '4. Compare' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
 
-export default function ElectricFenceCalculatorApp() {
+export default function ElectricFenceCalculatorApp({
+  catalog = DEFAULT_FENCE_CATALOG,
+  signedIn = false,
+}: {
+  catalog?: FenceCatalog;
+  signedIn?: boolean;
+}) {
   const [zones, setZones] = useState<FenceZone[]>(defaultFenceZones());
   const [config, setConfig] = useState(defaultFenceConfig());
   const [tab, setTab] = useState<TabId>('zones');
   const [exporting, setExporting] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
+  const [scenarios, setScenarios] = useState<FenceScenario[]>([]);
+  const [scenariosLoading, setScenariosLoading] = useState(signedIn);
+  const [scenarioError, setScenarioError] = useState('');
 
-  const design = useMemo(() => computeFenceDesign(zones, config), [zones, config]);
+  useEffect(() => {
+    if (signedIn) {
+      fetch('/api/electricfence/designs')
+        .then((r) => r.json())
+        .then((data) => setScenarios(data.designs ?? []))
+        .catch(() => setScenarioError('Could not load your saved designs.'))
+        .finally(() => setScenariosLoading(false));
+      return;
+    }
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (raw) setScenarios(JSON.parse(raw));
+    } catch {
+      // ignore corrupt storage
+    }
+  }, [signedIn]);
+
+  function persistLocal(next: FenceScenario[]) {
+    setScenarios(next);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  }
+
+  const design = useMemo(() => computeFenceDesign(zones, config, catalog), [zones, config, catalog]);
+
+  async function saveScenario(name: string) {
+    if (signedIn) {
+      setScenarioError('');
+      try {
+        const res = await fetch('/api/electricfence/designs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, zones, config }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setScenarioError(data.error || 'Could not save your design to your account.');
+          return;
+        }
+        setScenarios((prev) => [{ id: data.id, name: data.name, createdAt: new Date().toISOString(), zones: data.zones, config: data.config }, ...prev]);
+      } catch {
+        setScenarioError('Could not reach the server. Check your connection and try again.');
+      }
+      return;
+    }
+    const scenario: FenceScenario = {
+      id: `scn-${Date.now()}`,
+      name,
+      createdAt: new Date().toISOString(),
+      zones,
+      config,
+    };
+    persistLocal([...scenarios, scenario]);
+  }
+
+  function loadScenario(s: FenceScenario) {
+    setZones(s.zones);
+    setConfig(s.config);
+    setTab('design');
+  }
+
+  async function deleteScenario(id: string) {
+    if (signedIn) {
+      setScenarios((prev) => prev.filter((s) => s.id !== id));
+      try {
+        await fetch(`/api/electricfence/designs/${id}`, { method: 'DELETE' });
+      } catch {
+        setScenarioError('Could not delete that design — it may reappear on refresh.');
+      }
+      return;
+    }
+    persistLocal(scenarios.filter((s) => s.id !== id));
+  }
 
   async function exportPdf() {
     setExporting(true);
@@ -32,7 +117,7 @@ export default function ElectricFenceCalculatorApp() {
       const res = await fetch('/api/electricfence/pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zones, config }),
+        body: JSON.stringify({ zones, config, catalog }),
       });
       if (!res.ok) throw new Error('Failed to generate PDF');
       const blob = await res.blob();
@@ -88,8 +173,29 @@ export default function ElectricFenceCalculatorApp() {
       {tab === 'zones' && <ZoneBuilder zones={zones} onChange={setZones} />}
       {tab === 'config' && <FenceConfigPanel config={config} onChange={setConfig} />}
       {tab === 'design' && <FenceResultsPanel design={design} />}
+      {tab === 'compare' && (
+        <ScenarioCompare
+          scenarios={scenarios}
+          loading={scenariosLoading}
+          error={scenarioError}
+          signedIn={signedIn}
+          currentZones={zones}
+          currentConfig={config}
+          catalog={catalog}
+          onSave={saveScenario}
+          onLoad={loadScenario}
+          onDelete={deleteScenario}
+        />
+      )}
 
-      {quoteOpen && <RequestQuoteModal zones={zones} config={config} design={design} onClose={() => setQuoteOpen(false)} />}
+      <AiAssistantWidget
+        apiPath="/api/electricfence/assistant"
+        payload={{ zones, config, catalog }}
+        title="SmartTech Security Assistant"
+        subtitle="Ask about your current fence design"
+        starterPrompts={['Why do I need this energizer size?', 'What if I extend the perimeter by 100m?', 'Do I need a monitor for this fence?']}
+      />
+      {quoteOpen && <RequestQuoteModal zones={zones} config={config} design={design} catalog={catalog} onClose={() => setQuoteOpen(false)} />}
     </div>
   );
 }

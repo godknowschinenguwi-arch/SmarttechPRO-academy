@@ -1,30 +1,115 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import CameraPointBuilder from '@/components/cctv/CameraPointBuilder';
 import CctvConfigPanel from '@/components/cctv/CctvConfigPanel';
 import CctvResultsPanel from '@/components/cctv/CctvResultsPanel';
+import ScenarioCompare from '@/components/cctv/ScenarioCompare';
 import RequestQuoteModal from '@/components/cctv/RequestQuoteModal';
-import { computeCctvDesign, defaultCctvConfig, defaultCameraPoints } from '@/lib/cctv/engine';
+import AiAssistantWidget from '@/components/AiAssistantWidget';
+import { computeCctvDesign, defaultCctvConfig, defaultCameraPoints, DEFAULT_CCTV_CATALOG } from '@/lib/cctv/engine';
 import { buildCctvWhatsAppMessage } from '@/lib/cctv/whatsapp';
 import { whatsappLink } from '@/lib/contact';
-import type { CameraPoint } from '@/lib/cctv/types';
+import type { CameraPoint, CctvScenario, CctvCatalog } from '@/lib/cctv/types';
+
+const STORAGE_KEY = 'sta_cctv_scenarios_v1';
 
 const TABS = [
   { id: 'cameras', label: '1. Cameras' },
   { id: 'config', label: '2. Recording & network' },
   { id: 'design', label: '3. Design' },
+  { id: 'compare', label: '4. Compare' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
 
-export default function CctvCalculatorApp() {
+export default function CctvCalculatorApp({
+  catalog = DEFAULT_CCTV_CATALOG,
+  signedIn = false,
+}: {
+  catalog?: CctvCatalog;
+  signedIn?: boolean;
+}) {
   const [points, setPoints] = useState<CameraPoint[]>(defaultCameraPoints());
   const [config, setConfig] = useState(defaultCctvConfig());
   const [tab, setTab] = useState<TabId>('cameras');
   const [exporting, setExporting] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
+  const [scenarios, setScenarios] = useState<CctvScenario[]>([]);
+  const [scenariosLoading, setScenariosLoading] = useState(signedIn);
+  const [scenarioError, setScenarioError] = useState('');
 
-  const design = useMemo(() => computeCctvDesign(points, config), [points, config]);
+  useEffect(() => {
+    if (signedIn) {
+      fetch('/api/cctv/designs')
+        .then((r) => r.json())
+        .then((data) => setScenarios(data.designs ?? []))
+        .catch(() => setScenarioError('Could not load your saved designs.'))
+        .finally(() => setScenariosLoading(false));
+      return;
+    }
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (raw) setScenarios(JSON.parse(raw));
+    } catch {
+      // ignore corrupt storage
+    }
+  }, [signedIn]);
+
+  function persistLocal(next: CctvScenario[]) {
+    setScenarios(next);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  }
+
+  const design = useMemo(() => computeCctvDesign(points, config, catalog), [points, config, catalog]);
+
+  async function saveScenario(name: string) {
+    if (signedIn) {
+      setScenarioError('');
+      try {
+        const res = await fetch('/api/cctv/designs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, points, config }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setScenarioError(data.error || 'Could not save your design to your account.');
+          return;
+        }
+        setScenarios((prev) => [{ id: data.id, name: data.name, createdAt: new Date().toISOString(), points: data.points, config: data.config }, ...prev]);
+      } catch {
+        setScenarioError('Could not reach the server. Check your connection and try again.');
+      }
+      return;
+    }
+    const scenario: CctvScenario = {
+      id: `scn-${Date.now()}`,
+      name,
+      createdAt: new Date().toISOString(),
+      points,
+      config,
+    };
+    persistLocal([...scenarios, scenario]);
+  }
+
+  function loadScenario(s: CctvScenario) {
+    setPoints(s.points);
+    setConfig(s.config);
+    setTab('design');
+  }
+
+  async function deleteScenario(id: string) {
+    if (signedIn) {
+      setScenarios((prev) => prev.filter((s) => s.id !== id));
+      try {
+        await fetch(`/api/cctv/designs/${id}`, { method: 'DELETE' });
+      } catch {
+        setScenarioError('Could not delete that design — it may reappear on refresh.');
+      }
+      return;
+    }
+    persistLocal(scenarios.filter((s) => s.id !== id));
+  }
 
   async function exportPdf() {
     setExporting(true);
@@ -32,7 +117,7 @@ export default function CctvCalculatorApp() {
       const res = await fetch('/api/cctv/pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ points, config }),
+        body: JSON.stringify({ points, config, catalog }),
       });
       if (!res.ok) throw new Error('Failed to generate PDF');
       const blob = await res.blob();
@@ -88,8 +173,29 @@ export default function CctvCalculatorApp() {
       {tab === 'cameras' && <CameraPointBuilder points={points} onChange={setPoints} />}
       {tab === 'config' && <CctvConfigPanel config={config} onChange={setConfig} />}
       {tab === 'design' && <CctvResultsPanel design={design} />}
+      {tab === 'compare' && (
+        <ScenarioCompare
+          scenarios={scenarios}
+          loading={scenariosLoading}
+          error={scenarioError}
+          signedIn={signedIn}
+          currentPoints={points}
+          currentConfig={config}
+          catalog={catalog}
+          onSave={saveScenario}
+          onLoad={loadScenario}
+          onDelete={deleteScenario}
+        />
+      )}
 
-      {quoteOpen && <RequestQuoteModal points={points} config={config} design={design} onClose={() => setQuoteOpen(false)} />}
+      <AiAssistantWidget
+        apiPath="/api/cctv/assistant"
+        payload={{ points, config, catalog }}
+        title="SmartTech Security Assistant"
+        subtitle="Ask about your current CCTV design"
+        starterPrompts={['Why do I need this much storage?', 'What if I add 4 more cameras?', 'Do I need a PoE switch?']}
+      />
+      {quoteOpen && <RequestQuoteModal points={points} config={config} design={design} catalog={catalog} onClose={() => setQuoteOpen(false)} />}
     </div>
   );
 }

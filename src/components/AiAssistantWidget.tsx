@@ -1,27 +1,27 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { DEFAULT_CATALOG } from '@/lib/solar/engine';
-import type { LoadItem, SiteConfig, SolarCatalog } from '@/lib/solar/types';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
 }
 
-const STARTER_PROMPTS = [
-  'Why do I need this many panels?',
-  'What if I add air conditioning?',
-  'Is my battery bank big enough?',
-];
-
-export default function AiAssistant({
-  loads,
-  site,
-  catalog = DEFAULT_CATALOG,
+// Generic floating AI chat widget shared across the Solar/Electric
+// Fence/CCTV calculators. Each domain supplies its own API route (which
+// builds a system prompt grounded in that calculator's current design) and
+// the payload fields that route expects alongside `messages`.
+export default function AiAssistantWidget({
+  apiPath,
+  payload,
+  title,
+  subtitle,
+  starterPrompts,
 }: {
-  loads: LoadItem[];
-  site: SiteConfig;
-  catalog?: SolarCatalog;
+  apiPath: string;
+  payload: Record<string, unknown>;
+  title: string;
+  subtitle: string;
+  starterPrompts: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -44,10 +44,10 @@ export default function AiAssistant({
     setLoading(true);
 
     try {
-      const res = await fetch('/api/solar/assistant', {
+      const res = await fetch(apiPath, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: next, loads, site, catalog }),
+        body: JSON.stringify({ messages: next, ...payload }),
       });
 
       if (res.status === 503) {
@@ -75,8 +75,8 @@ export default function AiAssistant({
         <div className="flex h-[520px] w-[360px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-surface-line bg-white shadow-lift">
           <div className="flex items-center justify-between bg-gradient-to-r from-brand-700 to-brand-900 px-4 py-3 text-white">
             <div>
-              <p className="font-display text-sm font-bold">SmartTech Solar Assistant</p>
-              <p className="text-[11px] text-brand-100">Ask about your current design</p>
+              <p className="font-display text-sm font-bold">{title}</p>
+              <p className="text-[11px] text-brand-100">{subtitle}</p>
             </div>
             <button onClick={() => setOpen(false)} className="text-white/80 hover:text-white" aria-label="Close">✕</button>
           </div>
@@ -91,7 +91,7 @@ export default function AiAssistant({
                 {messages.length === 0 && (
                   <div className="flex flex-col gap-2">
                     <p className="text-xs text-ink-faint">Try asking:</p>
-                    {STARTER_PROMPTS.map((p) => (
+                    {starterPrompts.map((p) => (
                       <button
                         key={p}
                         onClick={() => send(p)}

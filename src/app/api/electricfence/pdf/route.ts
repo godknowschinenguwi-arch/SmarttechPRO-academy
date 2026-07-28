@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { clientIp, rateLimit } from '@/lib/rateLimit';
 import { computeFenceDesign } from '@/lib/electricfence/engine';
 import { generateFenceProposalPdf } from '@/lib/electricfence/pdf';
-import { sanitizeZones, sanitizeFenceConfig } from '@/lib/electricfence/sanitize';
+import { sanitizeZones, sanitizeFenceConfig, sanitizeFenceCatalog } from '@/lib/electricfence/sanitize';
 
 export async function POST(req: NextRequest) {
   const limited = rateLimit(`fence-pdf:${clientIp(req)}`, 20, 60 * 60_000);
@@ -15,7 +15,8 @@ export async function POST(req: NextRequest) {
 
   const zones = sanitizeZones(body.zones);
   const config = sanitizeFenceConfig(body.config);
-  const design = computeFenceDesign(zones, config);
+  const catalog = sanitizeFenceCatalog(body.catalog);
+  const design = computeFenceDesign(zones, config, catalog);
 
   const appUrl = new URL(req.url).origin;
   const pdfBytes = await generateFenceProposalPdf({ design, config, appUrl });

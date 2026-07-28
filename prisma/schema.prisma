@@ -50,6 +50,8 @@ model User {
   claimedLeads     Lead[]
   ownedOrgs        Organization[]       @relation("OrgOwner")
   orgMemberships   OrganizationMember[] @relation("OrgMembership")
+  fenceDesigns     FenceDesign[]        @relation("FenceDesignOwner")
+  cctvDesigns      CctvDesign[]         @relation("CctvDesignOwner")
 }
 
 // ---------- Catalog ----------
@@ -535,4 +537,143 @@ model OrganizationMember {
   joinedAt       DateTime     @default(now())
 
   @@unique([organizationId, userId])
+}
+
+model FenceEnergizer {
+  id              String   @id @default(cuid())
+  brand           String
+  model           String
+  joulesOutput    Float
+  maxFenceKm      Float
+  currentDrawA    Float
+  voltageOptions  String // JSON-encoded number[]
+  priceUsd        Float
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+}
+
+model FenceWire {
+  id               String   @id @default(cuid())
+  brand            String
+  model            String
+  type             String
+  ohmsPerKm        Float
+  spoolLengthM     Float
+  priceUsdPerSpool Float
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+}
+
+model FencePost {
+  id        String   @id @default(cuid())
+  brand     String
+  model     String
+  material  String
+  heightM   Float
+  priceUsd  Float
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model FenceMonitor {
+  id          String   @id @default(cuid())
+  brand       String
+  model       String
+  maxZones    Float
+  gsmCapable  Boolean  @default(false)
+  priceUsd    Float
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model FenceBattery {
+  id        String   @id @default(cuid())
+  brand     String
+  model     String
+  voltage   Float
+  ah        Float
+  priceUsd  Float
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model FenceDesign {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("FenceDesignOwner", fields: [userId], references: [id])
+  name      String
+  zones     String // JSON-encoded FenceZone[]
+  config    String // JSON-encoded FenceConfig
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CctvCamera {
+  id           String   @id @default(cuid())
+  brand        String
+  model        String
+  type         String
+  environment  String
+  resolutionMp Float
+  lowLight     Boolean  @default(false)
+  poeWatts     Float
+  priceUsd     Float
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+}
+
+model CctvNvr {
+  id           String   @id @default(cuid())
+  brand        String
+  model        String
+  channels     Float
+  poePorts     Float
+  poeBudgetW   Float
+  maxHddBays   Float
+  priceUsd     Float
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+}
+
+model CctvHdd {
+  id          String   @id @default(cuid())
+  brand       String
+  model       String
+  capacityTb  Float
+  priceUsd    Float
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model CctvCable {
+  id               String   @id @default(cuid())
+  brand            String
+  model            String
+  type             String
+  spoolLengthM     Float
+  priceUsdPerSpool Float
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+}
+
+model CctvPoeSwitch {
+  id          String   @id @default(cuid())
+  brand       String
+  model       String
+  ports       Float
+  poeBudgetW  Float
+  priceUsd    Float
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model CctvDesign {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("CctvDesignOwner", fields: [userId], references: [id])
+  name      String
+  points    String // JSON-encoded CameraPoint[]
+  config    String // JSON-encoded CctvConfig
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

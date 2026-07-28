@@ -2,17 +2,19 @@
 import { useState } from 'react';
 import { whatsappLink } from '@/lib/contact';
 import { buildCctvWhatsAppMessage } from '@/lib/cctv/whatsapp';
-import type { CctvDesignResult, CameraPoint, CctvConfig } from '@/lib/cctv/types';
+import type { CctvDesignResult, CameraPoint, CctvConfig, CctvCatalog } from '@/lib/cctv/types';
 
 export default function RequestQuoteModal({
   points,
   config,
   design,
+  catalog,
   onClose,
 }: {
   points: CameraPoint[];
   config: CctvConfig;
   design: CctvDesignResult;
+  catalog: CctvCatalog;
   onClose: () => void;
 }) {
   const [form, setForm] = useState({ name: config.clientName || '', phone: '', email: '', city: '', message: '' });
@@ -37,7 +39,7 @@ export default function RequestQuoteModal({
     const res = await fetch('/api/cctv/leads', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, points, config }),
+      body: JSON.stringify({ ...form, points, config, catalog }),
     });
     return res.ok;
   }

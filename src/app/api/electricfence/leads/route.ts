@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { clientIp, rateLimit } from '@/lib/rateLimit';
 import { createLead } from '@/lib/leads';
 import { computeFenceDesign } from '@/lib/electricfence/engine';
-import { sanitizeZones, sanitizeFenceConfig } from '@/lib/electricfence/sanitize';
+import { sanitizeZones, sanitizeFenceConfig, sanitizeFenceCatalog } from '@/lib/electricfence/sanitize';
 
 function str(v: unknown, maxLen: number): string {
   return typeof v === 'string' ? v.trim().slice(0, maxLen) : '';
@@ -29,7 +29,8 @@ export async function POST(req: NextRequest) {
 
   const zones = sanitizeZones(body.zones);
   const config = sanitizeFenceConfig(body.config);
-  const design = computeFenceDesign(zones, config);
+  const catalog = sanitizeFenceCatalog(body.catalog);
+  const design = computeFenceDesign(zones, config, catalog);
 
   const summary = `Fence · ${(design.totalPerimeterM / 1000).toFixed(2)}km · ${design.energizer.joulesOutput}J energizer`;
   const id = await createLead({

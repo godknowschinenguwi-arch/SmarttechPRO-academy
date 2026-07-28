@@ -85,6 +85,18 @@ export default async function AdminPage() {
             ⚡ Solar equipment catalog — panels, batteries, inverters, controllers →
           </Link>
           <Link
+            href="/admin/fence-catalog"
+            className="inline-flex items-center gap-2 rounded-xl border border-surface-line bg-surface-soft px-4 py-3 text-sm font-semibold text-ink-soft transition hover:border-brand-300 hover:text-brand-700"
+          >
+            🔌 Fence equipment catalog — energizers, wire, posts, monitors →
+          </Link>
+          <Link
+            href="/admin/cctv-catalog"
+            className="inline-flex items-center gap-2 rounded-xl border border-surface-line bg-surface-soft px-4 py-3 text-sm font-semibold text-ink-soft transition hover:border-brand-300 hover:text-brand-700"
+          >
+            📹 CCTV equipment catalog — cameras, NVR/DVR, storage, cable →
+          </Link>
+          <Link
             href="/admin/leads"
             className="inline-flex items-center gap-2 rounded-xl border border-surface-line bg-surface-soft px-4 py-3 text-sm font-semibold text-ink-soft transition hover:border-brand-300 hover:text-brand-700"
           >

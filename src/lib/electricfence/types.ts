@@ -125,3 +125,11 @@ export interface FenceDesignResult {
 
   warnings: FenceWarning[];
 }
+
+export interface FenceScenario {
+  id: string;
+  name: string;
+  createdAt: string;
+  zones: FenceZone[];
+  config: FenceConfig;
+}
