@@ -251,6 +251,21 @@ CREATE TABLE IF NOT EXISTS Lead (
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Employer/team accounts: a company account (Organization) whose owner adds
+-- already-registered technicians as members, and can see the team's
+-- aggregate course progress at /org.
+CREATE TABLE IF NOT EXISTS Organization (
+  id TEXT PRIMARY KEY, name TEXT NOT NULL, ownerId TEXT NOT NULL REFERENCES User(id),
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS OrganizationMember (
+  id TEXT PRIMARY KEY, organizationId TEXT NOT NULL REFERENCES Organization(id),
+  userId TEXT NOT NULL REFERENCES User(id), role TEXT NOT NULL DEFAULT 'MEMBER', -- OWNER | MEMBER
+  joinedAt TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (organizationId, userId)
+);
+
 CREATE INDEX IF NOT EXISTS idx_course_category ON Course(categoryId);
 CREATE INDEX IF NOT EXISTS idx_lesson_module ON Lesson(moduleId);
 CREATE INDEX IF NOT EXISTS idx_enrollment_user ON Enrollment(userId);
@@ -260,3 +275,5 @@ CREATE INDEX IF NOT EXISTS idx_solardesign_user ON SolarDesign(userId);
 CREATE INDEX IF NOT EXISTS idx_solarlead_status ON SolarLead(status);
 CREATE INDEX IF NOT EXISTS idx_lead_status ON Lead(status);
 CREATE INDEX IF NOT EXISTS idx_lead_claimedby ON Lead(claimedByUserId);
+CREATE INDEX IF NOT EXISTS idx_orgmember_org ON OrganizationMember(organizationId);
+CREATE INDEX IF NOT EXISTS idx_orgmember_user ON OrganizationMember(userId);
