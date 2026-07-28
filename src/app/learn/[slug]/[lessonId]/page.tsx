@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import VideoPlayer from '@/components/VideoPlayer';
 import QuizPlayer from '@/components/QuizPlayer';
 import CompleteLessonButton from '@/components/CompleteLessonButton';
+import CourseDiscussion from '@/components/CourseDiscussion';
 import { getCourse, getEnrollment, getLessonBundle, getUserProgressForCourse } from '@/lib/queries';
 import { all } from '@/lib/db';
 import { currentUser } from '@/lib/auth';
@@ -29,9 +30,9 @@ export default async function LessonPage({ params }: { params: { slug: string; l
   const pct = lessons.length ? Math.round((doneSet.size / lessons.length) * 100) : 0;
 
   const discussion = await all<any>(
-    `SELECT fp.body, fp.likes, fp.isAnswer, u.name AS userName, u.role FROM ForumPost fp
+    `SELECT fp.id, fp.body, fp.likes, fp.isAnswer, u.name AS userName, u.role FROM ForumPost fp
      JOIN ForumThread ft ON ft.id = fp.threadId JOIN User u ON u.id = fp.userId
-     WHERE ft.courseId = ? ORDER BY fp.createdAt LIMIT 6`, [course.id]);
+     WHERE ft.courseId = ? ORDER BY fp.createdAt LIMIT 100`, [course.id]);
 
   const lessonsByModule = new Map<string, any[]>();
   for (const l of lessons) {
@@ -131,21 +132,7 @@ export default async function LessonPage({ params }: { params: { slug: string; l
         {/* Discussion */}
         <section className="card p-6">
           <h2 className="font-display font-bold">💬 Discussion</h2>
-          <div className="mt-4 space-y-4">
-            {discussion.map((d: any, i: number) => (
-              <div key={i} className={`rounded-xl p-4 ${d.isAnswer ? 'bg-emerald-50' : 'bg-surface-soft'}`}>
-                <p className="text-xs font-bold">
-                  {d.userName}
-                  {d.role === 'INSTRUCTOR' && <span className="ml-2 chip bg-brand-600 text-white !text-[10px]">Instructor</span>}
-                  {d.isAnswer ? <span className="ml-2 text-emerald-600">✓ Best answer</span> : null}
-                </p>
-                <p className="mt-1 text-sm leading-6 text-ink-soft">{d.body}</p>
-                <p className="mt-2 text-xs text-ink-faint">👍 {d.likes}</p>
-              </div>
-            ))}
-            <textarea className="input" rows={2} placeholder="Ask a question about this lesson…" />
-            <button className="btn-ghost !py-2 text-xs">Post question</button>
-          </div>
+          <CourseDiscussion courseId={course.id} initialPosts={discussion} />
         </section>
       </div>
     </div>
