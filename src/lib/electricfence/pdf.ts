@@ -2,6 +2,7 @@
 // styled to match the solar proposal generator's brand system.
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from 'pdf-lib';
 import QRCode from 'qrcode';
+import { sanitizeForPdf } from '../pdfText';
 import type { FenceDesignResult, FenceConfig } from './types';
 
 const BLUE = rgb(0.08, 0.22, 0.56);
@@ -26,6 +27,7 @@ export interface FenceProposalData {
 }
 
 export async function generateFenceProposalPdf({ design, config, appUrl }: FenceProposalData): Promise<Uint8Array> {
+  config = { ...config, clientName: sanitizeForPdf(config.clientName), siteName: sanitizeForPdf(config.siteName), notes: sanitizeForPdf(config.notes) };
   const pdf = await PDFDocument.create();
   const helv = await pdf.embedFont(StandardFonts.Helvetica);
   const helvBold = await pdf.embedFont(StandardFonts.HelveticaBold);

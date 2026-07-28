@@ -170,6 +170,18 @@ export default async function CoursePage({ params }: { params: { slug: string } 
               verification. Complete a practical day for the hands-on endorsement.
             </p>
           </div>
+          {enrollment && (
+            <div className="card p-6">
+              <h3 className="font-display font-bold">📥 Study offline</h3>
+              <p className="mt-3 text-sm leading-6 text-ink-soft">
+                Download all lesson notes and the curriculum outline as one PDF, so you can keep studying without a
+                data connection.
+              </p>
+              <a href={`/api/courses/${course.slug}/offline-pdf`} className="btn-ghost mt-4 w-full !py-2 text-xs">
+                ⬇️ Download offline pack (PDF)
+              </a>
+            </div>
+          )}
           {practicals.length > 0 && (
             <div className="card p-6">
               <h3 className="font-display font-bold">🛠 Upcoming practical sessions</h3>

@@ -1,6 +1,7 @@
 // SmartTech Academy — certificate PDF generator (A4 landscape, brand styled, QR verified).
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from 'pdf-lib';
 import QRCode from 'qrcode';
+import { sanitizeForPdf } from './pdfText';
 
 const BLUE = rgb(0.08, 0.22, 0.56);       // deep brand blue
 const BLUE_BRIGHT = rgb(0.11, 0.37, 0.96);
@@ -27,6 +28,12 @@ function centered(page: PDFPage, text: string, y: number, font: PDFFont, size: n
 }
 
 export async function generateCertificatePdf(cert: CertData): Promise<Uint8Array> {
+  cert = {
+    ...cert,
+    studentName: sanitizeForPdf(cert.studentName),
+    courseTitle: sanitizeForPdf(cert.courseTitle),
+    instructorName: sanitizeForPdf(cert.instructorName),
+  };
   const pdf = await PDFDocument.create();
   const page = pdf.addPage([841.89, 595.28]); // A4 landscape (pt)
   const W = page.getWidth();

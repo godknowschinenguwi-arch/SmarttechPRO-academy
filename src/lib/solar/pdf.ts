@@ -3,6 +3,7 @@
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from 'pdf-lib';
 import QRCode from 'qrcode';
 import { computeFinancing } from './finance';
+import { sanitizeForPdf } from '../pdfText';
 import type { DesignResult, SiteConfig } from './types';
 
 const BLUE = rgb(0.08, 0.22, 0.56);
@@ -30,6 +31,7 @@ export interface ProposalData {
 }
 
 export async function generateSolarProposalPdf({ design, site, appUrl }: ProposalData): Promise<Uint8Array> {
+  site = { ...site, clientName: sanitizeForPdf(site.clientName), siteName: sanitizeForPdf(site.siteName), notes: sanitizeForPdf(site.notes) };
   const pdf = await PDFDocument.create();
   const helv = await pdf.embedFont(StandardFonts.Helvetica);
   const helvBold = await pdf.embedFont(StandardFonts.HelveticaBold);
