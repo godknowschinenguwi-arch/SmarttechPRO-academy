@@ -3,7 +3,10 @@ import { useMemo, useState } from 'react';
 import CameraPointBuilder from '@/components/cctv/CameraPointBuilder';
 import CctvConfigPanel from '@/components/cctv/CctvConfigPanel';
 import CctvResultsPanel from '@/components/cctv/CctvResultsPanel';
+import RequestQuoteModal from '@/components/cctv/RequestQuoteModal';
 import { computeCctvDesign, defaultCctvConfig, defaultCameraPoints } from '@/lib/cctv/engine';
+import { buildCctvWhatsAppMessage } from '@/lib/cctv/whatsapp';
+import { whatsappLink } from '@/lib/contact';
 import type { CameraPoint } from '@/lib/cctv/types';
 
 const TABS = [
@@ -19,6 +22,7 @@ export default function CctvCalculatorApp() {
   const [config, setConfig] = useState(defaultCctvConfig());
   const [tab, setTab] = useState<TabId>('cameras');
   const [exporting, setExporting] = useState(false);
+  const [quoteOpen, setQuoteOpen] = useState(false);
 
   const design = useMemo(() => computeCctvDesign(points, config), [points, config]);
 
@@ -63,14 +67,29 @@ export default function CctvCalculatorApp() {
             </button>
           ))}
         </div>
-        <button onClick={exportPdf} disabled={exporting} className="btn-accent">
-          {exporting ? 'Generating…' : '📄 Export PDF proposal'}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={whatsappLink(buildCctvWhatsAppMessage(design, config))}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-ghost !border-emerald-300 !text-emerald-700 hover:!bg-emerald-50"
+          >
+            💬 WhatsApp
+          </a>
+          <button onClick={() => setQuoteOpen(true)} className="btn-primary">
+            📋 Request a quote
+          </button>
+          <button onClick={exportPdf} disabled={exporting} className="btn-accent">
+            {exporting ? 'Generating…' : '📄 Export PDF proposal'}
+          </button>
+        </div>
       </div>
 
       {tab === 'cameras' && <CameraPointBuilder points={points} onChange={setPoints} />}
       {tab === 'config' && <CctvConfigPanel config={config} onChange={setConfig} />}
       {tab === 'design' && <CctvResultsPanel design={design} />}
+
+      {quoteOpen && <RequestQuoteModal points={points} config={config} design={design} onClose={() => setQuoteOpen(false)} />}
     </div>
   );
 }

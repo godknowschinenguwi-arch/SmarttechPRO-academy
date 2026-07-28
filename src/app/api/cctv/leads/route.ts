@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { clientIp, rateLimit } from '@/lib/rateLimit';
 import { createLead } from '@/lib/leads';
-import { computeSystemDesign } from '@/lib/solar/engine';
-import { sanitizeLoads, sanitizeSite, sanitizeCatalog } from '@/lib/solar/sanitize';
+import { computeCctvDesign } from '@/lib/cctv/engine';
+import { sanitizeCameraPoints, sanitizeCctvConfig } from '@/lib/cctv/sanitize';
 
 function str(v: unknown, maxLen: number): string {
   return typeof v === 'string' ? v.trim().slice(0, maxLen) : '';
 }
 
 export async function POST(req: NextRequest) {
-  const limited = rateLimit(`solar-lead:${clientIp(req)}`, 5, 60 * 60_000);
+  const limited = rateLimit(`cctv-lead:${clientIp(req)}`, 5, 60 * 60_000);
   if (!limited.ok) {
     return NextResponse.json({ error: 'Too many requests, please try again shortly.' }, { status: 429, headers: { 'Retry-After': String(limited.retryAfterSec) } });
   }
@@ -27,16 +27,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Name and phone number are required.' }, { status: 400 });
   }
 
-  const loads = sanitizeLoads(body.loads);
-  const site = sanitizeSite(body.site);
-  const catalog = sanitizeCatalog(body.catalog);
-  const design = computeSystemDesign(loads, site, {}, catalog);
+  const points = sanitizeCameraPoints(body.points);
+  const config = sanitizeCctvConfig(body.config);
+  const design = computeCctvDesign(points, config);
 
-  const summary = `${site.systemType.replace('_', '-')} · ${(design.arrayWpActual / 1000).toFixed(2)}kWp${
-    design.batteryUsableKwh ? ` · ${design.batteryUsableKwh.toFixed(1)}kWh battery` : ''
-  }`;
+  const summary = `CCTV · ${design.cameraCount} camera${design.cameraCount !== 1 ? 's' : ''} · ${design.nvr.channels}CH NVR`;
   const id = await createLead({
-    source: 'SOLAR',
+    source: 'CCTV',
     name,
     phone,
     email,
@@ -44,7 +41,7 @@ export async function POST(req: NextRequest) {
     message,
     summary,
     totalUsd: design.totalUsd,
-    payload: { loads, site },
+    payload: { points, config },
   });
 
   return NextResponse.json({ ok: true, id });

@@ -62,6 +62,15 @@ export async function run(sql: string, args: InValue[] = []): Promise<void> {
   await db.execute({ sql, args });
 }
 
+// Like run(), but returns the number of rows actually changed — used for
+// conditional updates (e.g. "claim this row only if still unclaimed") where
+// the caller needs to know whether their update actually took effect.
+export async function runAffecting(sql: string, args: InValue[] = []): Promise<number> {
+  await ready();
+  const res = await db.execute({ sql, args });
+  return res.rowsAffected;
+}
+
 export async function insert(table: string, data: Row): Promise<string> {
   const id = (data.id as string) ?? randomUUID();
   const row: Row = { id, ...data };

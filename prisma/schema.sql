@@ -226,14 +226,28 @@ CREATE TABLE IF NOT EXISTS SolarDesign (
   updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- "Request a quote" lead capture from the public calculator — no account
--- required. Reviewed by admins at /admin/solar-leads.
+-- "Request a quote" lead capture from the public calculators — no account
+-- required to submit. Superseded by the unified Lead table below (kept here,
+-- unused, so historical rows from before the Lead table existed aren't lost).
 CREATE TABLE IF NOT EXISTS SolarLead (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL, phone TEXT NOT NULL, email TEXT, city TEXT, message TEXT,
   systemType TEXT NOT NULL, totalUsd REAL NOT NULL, arrayWpActual REAL NOT NULL, batteryUsableKwh REAL NOT NULL,
   loads TEXT NOT NULL, site TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'NEW',
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Unified lead capture across all calculators (Solar, Electric Fence, CCTV) —
+-- feeds both the admin review panel and the installer marketplace, where
+-- any signed-in user can claim an open lead to follow up on.
+CREATE TABLE IF NOT EXISTS Lead (
+  id TEXT PRIMARY KEY,
+  source TEXT NOT NULL, -- SOLAR | FENCE | CCTV
+  name TEXT NOT NULL, phone TEXT NOT NULL, email TEXT, city TEXT, message TEXT,
+  summary TEXT NOT NULL, totalUsd REAL NOT NULL, payload TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'NEW', -- NEW | CLAIMED | CONTACTED | CONVERTED | CLOSED
+  claimedByUserId TEXT REFERENCES User(id), claimedAt TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -244,3 +258,5 @@ CREATE INDEX IF NOT EXISTS idx_progress_user ON LessonProgress(userId);
 CREATE INDEX IF NOT EXISTS idx_notification_user ON Notification(userId);
 CREATE INDEX IF NOT EXISTS idx_solardesign_user ON SolarDesign(userId);
 CREATE INDEX IF NOT EXISTS idx_solarlead_status ON SolarLead(status);
+CREATE INDEX IF NOT EXISTS idx_lead_status ON Lead(status);
+CREATE INDEX IF NOT EXISTS idx_lead_claimedby ON Lead(claimedByUserId);
