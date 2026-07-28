@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import CctvCalculatorApp from './CctvCalculatorApp';
+import { getActiveCctvCatalog } from '@/lib/cctv/loadCatalog';
+import { currentUser } from '@/lib/auth';
 
 export const metadata: Metadata = {
   title: 'CCTV Calculator & System Designer — SmartTech Academy',
@@ -8,7 +10,9 @@ export const metadata: Metadata = {
     'Pro-grade CCTV sizing tool: build a camera point profile, size storage, bandwidth, PoE budget, cabling and the NVR against a live equipment catalogue, and export a branded proposal.',
 };
 
-export default function CctvCalculatorPage() {
+export default async function CctvCalculatorPage() {
+  const [catalog, user] = await Promise.all([getActiveCctvCatalog(), currentUser()]);
+
   return (
     <div className="bg-surface-soft pb-16">
       <div className="bg-gradient-to-br from-brand-800 via-brand-700 to-brand-900 py-12 text-white">
@@ -22,7 +26,7 @@ export default function CctvCalculatorPage() {
         </div>
       </div>
       <div className="container-x -mt-6 flex flex-col gap-6">
-        <CctvCalculatorApp />
+        <CctvCalculatorApp catalog={catalog} signedIn={!!user} />
 
         <Link
           href="/courses/cctv-installation-technician"

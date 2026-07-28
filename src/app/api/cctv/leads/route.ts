@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { clientIp, rateLimit } from '@/lib/rateLimit';
 import { createLead } from '@/lib/leads';
 import { computeCctvDesign } from '@/lib/cctv/engine';
-import { sanitizeCameraPoints, sanitizeCctvConfig } from '@/lib/cctv/sanitize';
+import { sanitizeCameraPoints, sanitizeCctvConfig, sanitizeCctvCatalog } from '@/lib/cctv/sanitize';
 
 function str(v: unknown, maxLen: number): string {
   return typeof v === 'string' ? v.trim().slice(0, maxLen) : '';
@@ -29,7 +29,8 @@ export async function POST(req: NextRequest) {
 
   const points = sanitizeCameraPoints(body.points);
   const config = sanitizeCctvConfig(body.config);
-  const design = computeCctvDesign(points, config);
+  const catalog = sanitizeCctvCatalog(body.catalog);
+  const design = computeCctvDesign(points, config, catalog);
 
   const summary = `CCTV · ${design.cameraCount} camera${design.cameraCount !== 1 ? 's' : ''} · ${design.nvr.channels}CH NVR`;
   const id = await createLead({
