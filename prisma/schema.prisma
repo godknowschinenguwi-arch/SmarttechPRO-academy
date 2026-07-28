@@ -48,6 +48,8 @@ model User {
   auditLogs        AuditLog[]
   solarDesigns     SolarDesign[]
   claimedLeads     Lead[]
+  ownedOrgs        Organization[]       @relation("OrgOwner")
+  orgMemberships   OrganizationMember[] @relation("OrgMembership")
 }
 
 // ---------- Catalog ----------
@@ -512,4 +514,25 @@ model Lead {
   claimedBy       User?     @relation(fields: [claimedByUserId], references: [id])
   claimedAt       DateTime?
   createdAt       DateTime  @default(now())
+}
+
+model Organization {
+  id        String               @id @default(cuid())
+  name      String
+  ownerId   String
+  owner     User                 @relation("OrgOwner", fields: [ownerId], references: [id])
+  members   OrganizationMember[]
+  createdAt DateTime             @default(now())
+}
+
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  userId         String
+  user           User         @relation("OrgMembership", fields: [userId], references: [id])
+  role           String       @default("MEMBER") // OWNER | MEMBER
+  joinedAt       DateTime     @default(now())
+
+  @@unique([organizationId, userId])
 }

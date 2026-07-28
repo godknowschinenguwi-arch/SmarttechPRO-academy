@@ -40,6 +40,7 @@ export default async function DashboardPage() {
           <div className="mt-4 flex flex-wrap gap-3">
             {continueHref && <Link href={continueHref} className="btn-accent">Continue Learning →</Link>}
             <Link href="/courses" className="btn bg-white/10 text-white hover:bg-white/20">Browse Courses</Link>
+            <Link href="/org" className="btn bg-white/10 text-white hover:bg-white/20">🏢 My Team</Link>
           </div>
         </div>
         <div className="flex items-center gap-8">
