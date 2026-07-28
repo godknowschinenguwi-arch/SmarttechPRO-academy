@@ -152,8 +152,8 @@ export async function generateSolarProposalPdf({ design, site, appUrl }: Proposa
   };
   totalsRow('Equipment subtotal', money(design.equipmentTotalUsd));
   totalsRow('Install & contingency buffer', money(design.installBufferUsd));
-  p2.drawRectangle({ x: margin, y: ty - 4, width: W - margin * 2, height: 34, color: SOFT });
-  ty -= 6;
+  ty -= 10;
+  p2.drawRectangle({ x: margin, y: ty - 8, width: W - margin * 2, height: 34, color: SOFT });
   totalsRow('TOTAL SYSTEM COST', money(design.totalUsd), true, true);
 
   ty -= 30;
