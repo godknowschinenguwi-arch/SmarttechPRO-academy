@@ -3,7 +3,10 @@ import { useMemo, useState } from 'react';
 import ZoneBuilder from '@/components/electricfence/ZoneBuilder';
 import FenceConfigPanel from '@/components/electricfence/FenceConfigPanel';
 import FenceResultsPanel from '@/components/electricfence/FenceResultsPanel';
+import RequestQuoteModal from '@/components/electricfence/RequestQuoteModal';
 import { computeFenceDesign, defaultFenceConfig, defaultFenceZones } from '@/lib/electricfence/engine';
+import { buildFenceWhatsAppMessage } from '@/lib/electricfence/whatsapp';
+import { whatsappLink } from '@/lib/contact';
 import type { FenceZone } from '@/lib/electricfence/types';
 
 const TABS = [
@@ -19,6 +22,7 @@ export default function ElectricFenceCalculatorApp() {
   const [config, setConfig] = useState(defaultFenceConfig());
   const [tab, setTab] = useState<TabId>('zones');
   const [exporting, setExporting] = useState(false);
+  const [quoteOpen, setQuoteOpen] = useState(false);
 
   const design = useMemo(() => computeFenceDesign(zones, config), [zones, config]);
 
@@ -63,14 +67,29 @@ export default function ElectricFenceCalculatorApp() {
             </button>
           ))}
         </div>
-        <button onClick={exportPdf} disabled={exporting} className="btn-accent">
-          {exporting ? 'Generating…' : '📄 Export PDF proposal'}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={whatsappLink(buildFenceWhatsAppMessage(design, config))}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-ghost !border-emerald-300 !text-emerald-700 hover:!bg-emerald-50"
+          >
+            💬 WhatsApp
+          </a>
+          <button onClick={() => setQuoteOpen(true)} className="btn-primary">
+            📋 Request a quote
+          </button>
+          <button onClick={exportPdf} disabled={exporting} className="btn-accent">
+            {exporting ? 'Generating…' : '📄 Export PDF proposal'}
+          </button>
+        </div>
       </div>
 
       {tab === 'zones' && <ZoneBuilder zones={zones} onChange={setZones} />}
       {tab === 'config' && <FenceConfigPanel config={config} onChange={setConfig} />}
       {tab === 'design' && <FenceResultsPanel design={design} />}
+
+      {quoteOpen && <RequestQuoteModal zones={zones} config={config} design={design} onClose={() => setQuoteOpen(false)} />}
     </div>
   );
 }

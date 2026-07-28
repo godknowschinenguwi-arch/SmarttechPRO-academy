@@ -47,6 +47,7 @@ model User {
   lessonProgress   LessonProgress[]
   auditLogs        AuditLog[]
   solarDesigns     SolarDesign[]
+  claimedLeads     Lead[]
 }
 
 // ---------- Catalog ----------
@@ -493,4 +494,22 @@ model SolarLead {
   site             String // JSON-encoded SiteConfig
   status           String   @default("NEW") // NEW | CONTACTED | CONVERTED | CLOSED
   createdAt        DateTime @default(now())
+}
+
+model Lead {
+  id              String    @id @default(cuid())
+  source          String // SOLAR | FENCE | CCTV
+  name            String
+  phone           String
+  email           String?
+  city            String?
+  message         String?
+  summary         String
+  totalUsd        Float
+  payload         String // JSON-encoded calculator-specific snapshot
+  status          String    @default("NEW") // NEW | CLAIMED | CONTACTED | CONVERTED | CLOSED
+  claimedByUserId String?
+  claimedBy       User?     @relation(fields: [claimedByUserId], references: [id])
+  claimedAt       DateTime?
+  createdAt       DateTime  @default(now())
 }
