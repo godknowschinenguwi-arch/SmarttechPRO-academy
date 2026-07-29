@@ -1,15 +1,23 @@
 'use client';
-import type { FenceConfig, PowerSource, PostMaterial, WireType } from '@/lib/electricfence/types';
+import type { FenceConfig, PowerSource, PostMaterial, PostShape, WireType } from '@/lib/electricfence/types';
 
 const WIRE_TYPES: { id: WireType; label: string; blurb: string }[] = [
   { id: 'HT_WIRE', label: 'High-tensile galvanised', blurb: 'Standard 2.5mm HT wire — low resistance, longest effective run per energizer.' },
   { id: 'BRAIDED_WIRE', label: 'Conductive braid/rope', blurb: 'More visible, flexible — higher resistance shortens the effective range.' },
 ];
 
+const STRAND_OPTIONS = [6, 8, 10, 12];
+
 const POST_MATERIALS: { id: PostMaterial; label: string }[] = [
-  { id: 'STEEL', label: 'Steel Y-standard' },
+  { id: 'STEEL', label: 'Steel' },
   { id: 'TIMBER', label: 'Treated timber' },
   { id: 'CONCRETE', label: 'Precast concrete' },
+];
+
+const POST_SHAPES: { id: PostShape; label: string }[] = [
+  { id: 'STANDARD', label: 'Y-standard' },
+  { id: 'SQUARE_STRAIGHT', label: 'Square tube — straight' },
+  { id: 'SQUARE_BEND', label: 'Square tube — bend' },
 ];
 
 const POWER_SOURCES: { id: PowerSource; label: string; blurb: string }[] = [
@@ -55,15 +63,20 @@ export default function FenceConfigPanel({ config, onChange }: { config: FenceCo
         </div>
 
         <div>
-          <label className="mb-1 flex justify-between text-xs font-semibold text-ink-soft">
-            <span>Number of strands</span> <span>{config.strandCount}</span>
-          </label>
-          <input
-            type="range" min={2} max={16} step={1}
-            value={config.strandCount}
-            onChange={(e) => set('strandCount', Number(e.target.value))}
-            className="w-full accent-brand-600"
-          />
+          <label className="mb-2 block text-xs font-semibold text-ink-soft">Number of strands</label>
+          <div className="flex gap-2">
+            {STRAND_OPTIONS.map((n) => (
+              <button
+                key={n}
+                onClick={() => set('strandCount', n)}
+                className={`flex-1 rounded-lg border py-2 text-sm font-bold transition ${
+                  config.strandCount === n ? 'border-brand-600 bg-brand-600 text-white' : 'border-surface-line text-ink-soft hover:border-brand-300'
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -73,7 +86,15 @@ export default function FenceConfigPanel({ config, onChange }: { config: FenceCo
           </div>
           <div>
             <label className="mb-1 block text-xs font-semibold text-ink-soft">Post material</label>
-            <select className="input" value={config.postMaterial} onChange={(e) => set('postMaterial', e.target.value as PostMaterial)}>
+            <select
+              className="input"
+              value={config.postMaterial}
+              onChange={(e) => {
+                const material = e.target.value as PostMaterial;
+                const shape = material === 'STEEL' ? config.postShape : 'STANDARD';
+                onChange({ ...config, postMaterial: material, postShape: shape });
+              }}
+            >
               {POST_MATERIALS.map((p) => (
                 <option key={p.id} value={p.id}>{p.label}</option>
               ))}
@@ -81,9 +102,29 @@ export default function FenceConfigPanel({ config, onChange }: { config: FenceCo
           </div>
         </div>
 
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-ink-soft">Gates / access points</label>
-          <input type="number" min={0} className="input" value={config.gateCount} onChange={(e) => set('gateCount', Math.max(0, Number(e.target.value) || 0))} />
+        {config.postMaterial === 'STEEL' && (
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-ink-soft">Post shape</label>
+            <select className="input" value={config.postShape} onChange={(e) => set('postShape', e.target.value as PostShape)}>
+              {POST_SHAPES.map((s) => (
+                <option key={s.id} value={s.id}>{s.label}</option>
+              ))}
+            </select>
+            {config.postShape !== 'STANDARD' && (
+              <p className="mt-1 text-[11px] text-ink-faint">Square tube posts come with bobbin insulators pre-fitted — no separate insulator line in the BOM.</p>
+            )}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-ink-soft">Gates / access points</label>
+            <input type="number" min={0} className="input" value={config.gateCount} onChange={(e) => set('gateCount', Math.max(0, Number(e.target.value) || 0))} />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-ink-soft">Corner stays / corner</label>
+            <input type="number" min={0} max={4} className="input" value={config.cornerStaysPerCorner} onChange={(e) => set('cornerStaysPerCorner', Math.max(0, Math.min(4, Number(e.target.value) || 0)))} />
+          </div>
         </div>
       </div>
 

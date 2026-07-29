@@ -113,7 +113,15 @@ export async function generateFenceProposalPdf({ design, config, appUrl }: Fence
     ['Effective fence range', `${design.effectiveFenceKm.toFixed(1)} km`],
     ['Wire spools required', `${design.wireSpoolsNeeded} × ${design.wire.spoolLengthM}m`],
     ['Earth stakes', String(design.earthStakeCount)],
-    ['Backup battery', design.battery ? `${design.batteryCount} × ${design.battery.model}` : 'None (mains only)'],
+    ['Corner stays', String(design.cornerStayCount)],
+    [
+      'Backup battery',
+      design.battery
+        ? `${design.batteryCount} × ${design.battery.model} (+ energizer's bundled ${design.energizer.bundledBatteryAh}Ah)`
+        : config.powerSource === 'MAINS'
+          ? 'None (mains only)'
+          : `Covered by energizer's bundled ${design.energizer.bundledBatteryAh}Ah`,
+    ],
   ];
   engRows.forEach(([k, v]) => {
     text(p1, k, margin, y, helv, 9, FAINT);

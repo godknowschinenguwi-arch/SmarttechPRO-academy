@@ -2,7 +2,9 @@
 
 export type PowerSource = 'MAINS' | 'MAINS_WITH_BACKUP' | 'SOLAR';
 export type PostMaterial = 'STEEL' | 'TIMBER' | 'CONCRETE';
+export type PostShape = 'STANDARD' | 'SQUARE_STRAIGHT' | 'SQUARE_BEND';
 export type WireType = 'HT_WIRE' | 'BRAIDED_WIRE';
+export type FenceAccessoryCategory = 'COMPRESSION_SPRING' | 'HOOK' | 'COPPER_FERRULE' | 'FENCE_LIGHT' | 'LIGHTNING_DIVERTER' | 'OTHER';
 
 export interface FenceZone {
   id: string;
@@ -11,11 +13,18 @@ export interface FenceZone {
   corners: number;
 }
 
+export interface SelectedAccessory {
+  id: string;
+  qty: number;
+}
+
 export interface FenceConfig {
   strandCount: number;
   wireType: WireType;
   postSpacingM: number;
   postMaterial: PostMaterial;
+  postShape: PostShape;
+  cornerStaysPerCorner: number;
   gateCount: number;
   powerSource: PowerSource;
   backupHours: number;
@@ -25,6 +34,7 @@ export interface FenceConfig {
   clientName: string;
   siteName: string;
   notes: string;
+  accessories: SelectedAccessory[];
 }
 
 export interface CatalogEnergizer {
@@ -35,6 +45,8 @@ export interface CatalogEnergizer {
   maxFenceKm: number;
   currentDrawA: number;
   voltageOptions: Array<12 | 24>;
+  bundledBatteryAh: number; // backup battery included with the energizer (0 if none)
+  bundledSiren: boolean;
   priceUsd: number;
 }
 
@@ -53,7 +65,9 @@ export interface CatalogPost {
   brand: string;
   model: string;
   material: PostMaterial;
+  shape: PostShape;
   heightM: number;
+  insulatorsIncluded: boolean; // bobbin insulators pre-fitted — no separate insulator line needed
   priceUsd: number;
 }
 
@@ -75,12 +89,22 @@ export interface CatalogBackupBattery {
   priceUsd: number;
 }
 
+export interface CatalogFenceAccessory {
+  id: string;
+  category: FenceAccessoryCategory;
+  brand: string;
+  model: string;
+  spec: string;
+  priceUsd: number;
+}
+
 export interface FenceCatalog {
   energizers: CatalogEnergizer[];
   wires: CatalogWire[];
   posts: CatalogPost[];
   monitors: CatalogMonitor[];
   batteries: CatalogBackupBattery[];
+  accessories: CatalogFenceAccessory[];
 }
 
 export interface BomLine {
@@ -112,6 +136,7 @@ export interface FenceDesignResult {
   postCount: number;
   insulatorCount: number;
   earthStakeCount: number;
+  cornerStayCount: number;
 
   battery: CatalogBackupBattery | null;
   batteryCount: number;

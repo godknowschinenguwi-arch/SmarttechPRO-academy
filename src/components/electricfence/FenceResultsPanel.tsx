@@ -1,6 +1,6 @@
 'use client';
 import { Price } from '@/components/CurrencyProvider';
-import type { FenceDesignResult } from '@/lib/electricfence/types';
+import type { FenceDesignResult, FenceConfig } from '@/lib/electricfence/types';
 
 const WARN_STYLE: Record<string, string> = {
   info: 'bg-brand-50 text-brand-700 border-brand-200',
@@ -8,7 +8,7 @@ const WARN_STYLE: Record<string, string> = {
   critical: 'bg-rose-50 text-rose-700 border-rose-200',
 };
 
-export default function FenceResultsPanel({ design }: { design: FenceDesignResult }) {
+export default function FenceResultsPanel({ design, config }: { design: FenceDesignResult; config: FenceConfig }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -76,7 +76,17 @@ export default function FenceResultsPanel({ design }: { design: FenceDesignResul
           <Row k="Effective fence range" v={`${design.effectiveFenceKm.toFixed(1)} km`} />
           <Row k="Wire spools" v={`${design.wireSpoolsNeeded} × ${design.wire.spoolLengthM}m`} />
           <Row k="Earth stakes" v={String(design.earthStakeCount)} />
-          <Row k="Backup battery" v={design.battery ? `${design.batteryCount} × ${design.battery.model}` : '—'} />
+          <Row k="Corner stays" v={String(design.cornerStayCount)} />
+          <Row
+            k="Backup battery"
+            v={
+              design.battery
+                ? `${design.batteryCount} × ${design.battery.model}`
+                : config.powerSource === 'MAINS'
+                  ? '—'
+                  : `Covered by energizer's bundled ${design.energizer.bundledBatteryAh}Ah`
+            }
+          />
         </dl>
         <p className="mt-3 text-[11px] leading-relaxed text-ink-faint">
           Indicative sizing and pricing for planning purposes. Effective energizer range assumes standard soil

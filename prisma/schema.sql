@@ -270,7 +270,8 @@ CREATE TABLE IF NOT EXISTS OrganizationMember (
 CREATE TABLE IF NOT EXISTS FenceEnergizer (
   id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL,
   joulesOutput REAL NOT NULL, maxFenceKm REAL NOT NULL, currentDrawA REAL NOT NULL,
-  voltageOptions TEXT NOT NULL, priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1,
+  voltageOptions TEXT NOT NULL, bundledBatteryAh REAL NOT NULL DEFAULT 7, bundledSiren INTEGER NOT NULL DEFAULT 1,
+  priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1,
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -282,7 +283,8 @@ CREATE TABLE IF NOT EXISTS FenceWire (
 
 CREATE TABLE IF NOT EXISTS FencePost (
   id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, material TEXT NOT NULL,
-  heightM REAL NOT NULL, priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1,
+  shape TEXT NOT NULL DEFAULT 'STANDARD', heightM REAL NOT NULL, insulatorsIncluded INTEGER NOT NULL DEFAULT 0,
+  priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1,
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -296,6 +298,18 @@ CREATE TABLE IF NOT EXISTS FenceBattery (
   id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, voltage REAL NOT NULL,
   ah REAL NOT NULL, priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1,
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Migration for fence catalog tables created before these columns existed
+-- (ignored by db.ts/seed.mjs when the column is already present).
+ALTER TABLE FenceEnergizer ADD COLUMN bundledBatteryAh REAL NOT NULL DEFAULT 7;
+ALTER TABLE FenceEnergizer ADD COLUMN bundledSiren INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE FencePost ADD COLUMN shape TEXT NOT NULL DEFAULT 'STANDARD';
+ALTER TABLE FencePost ADD COLUMN insulatorsIncluded INTEGER NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS FenceAccessory (
+  id TEXT PRIMARY KEY, category TEXT NOT NULL, brand TEXT NOT NULL, model TEXT NOT NULL, spec TEXT NOT NULL,
+  priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- Cloud-saved Electric Fence designs, tied to a signed-in account.

@@ -5,15 +5,21 @@ export function buildAssistantSystemPrompt(zones: FenceZone[], config: FenceConf
     ? zones.map((z) => `- ${z.name}: ${z.lengthM}m, ${z.corners} corners`).join('\n')
     : '(no zones added yet)';
 
+  const postShapeNote = config.postShape === 'SQUARE_STRAIGHT' ? 'square tube, straight, bobbin insulators pre-fitted'
+    : config.postShape === 'SQUARE_BEND' ? 'square tube, bend, bobbin insulators pre-fitted'
+    : 'standard';
+
   return `You are the SmartTech Security Assistant, embedded in SmartTech Academy's electric fence calculator. A user is designing an electric fence system in the tool right now and may ask you questions about it.
 
 Current design under discussion:
 - Total perimeter: ${(design.totalPerimeterM / 1000).toFixed(2)} km across ${zones.length} zone(s)
 - Strands: ${config.strandCount} x ${config.wireType === 'BRAIDED_WIRE' ? 'conductive braid' : 'high-tensile galvanised wire'}
-- Energizer: ${design.energizerCount} x ${design.energizer.brand} ${design.energizer.model} (${design.energizer.joulesOutput}J, effective range ${design.effectiveFenceKm.toFixed(1)}km)
-- Posts: ${design.postCount} x ${config.postMaterial.toLowerCase()}, ${config.postSpacingM}m spacing
-- Power: ${config.powerSource.replace(/_/g, ' ').toLowerCase()}${config.powerSource !== 'MAINS' ? `, ${config.backupHours}h backup autonomy` : ''}
+- Energizer: ${design.energizerCount} x ${design.energizer.brand} ${design.energizer.model} (${design.energizer.joulesOutput}J, effective range ${design.effectiveFenceKm.toFixed(1)}km) — ships with a bundled ${design.energizer.bundledBatteryAh}Ah backup battery and built-in siren
+- Posts: ${design.postCount} x ${config.postMaterial.toLowerCase()} (${postShapeNote}), ${config.postSpacingM}m spacing
+- Corner stays: ${design.cornerStayCount} (${config.cornerStaysPerCorner} per corner × ${design.totalCorners} corners)
+- Power: ${config.powerSource.replace(/_/g, ' ').toLowerCase()}${config.powerSource !== 'MAINS' ? `, ${config.backupHours}h backup autonomy${design.battery ? ` (needs ${design.batteryCount} extra ${design.battery.model} beyond the energizer's bundled battery)` : ` (fully covered by the energizer's bundled ${design.energizer.bundledBatteryAh}Ah battery)`}` : ''}
 - Monitoring: ${config.monitoringEnabled ? `zone monitor${config.gsmAlertEnabled ? ' with GSM/SMS alert' : ''}` : 'none'}
+- Accessories selected: ${config.accessories.length ? `${config.accessories.length} item type(s) (springs, hooks, ferrules, fence lights, lightning diverters etc. — see the Accessories tab for the exact list)` : 'none yet'}
 - Estimated total system cost: $${design.totalUsd.toLocaleString()}
 - Zones:
 ${zoneLines}

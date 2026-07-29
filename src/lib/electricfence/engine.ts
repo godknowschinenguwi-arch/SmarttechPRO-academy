@@ -1,4 +1,4 @@
-import { ENERGIZERS, WIRES, POSTS, MONITORS, BATTERIES } from './catalog';
+import { ENERGIZERS, WIRES, POSTS, MONITORS, BATTERIES, FENCE_ACCESSORIES } from './catalog';
 import type {
   FenceZone,
   FenceConfig,
@@ -8,19 +8,31 @@ import type {
   CatalogEnergizer,
   CatalogWire,
   CatalogPost,
+  CatalogFenceAccessory,
+  FenceAccessoryCategory,
   FenceCatalog,
 } from './types';
 
-export const DEFAULT_FENCE_CATALOG: FenceCatalog = { energizers: ENERGIZERS, wires: WIRES, posts: POSTS, monitors: MONITORS, batteries: BATTERIES };
+export const DEFAULT_FENCE_CATALOG: FenceCatalog = { energizers: ENERGIZERS, wires: WIRES, posts: POSTS, monitors: MONITORS, batteries: BATTERIES, accessories: FENCE_ACCESSORIES };
 
 const WIRE_WASTAGE_PCT = 0.05; // tension takeup, corner wraps, joins
 const BRAIDED_RANGE_DERATE = 1.6; // higher resistance than HT wire shortens an energizer's effective rated range
 const SAFETY_MARGIN = 1.15; // vegetation growth, corrosion, imperfect insulation over the fence's life
 const INSULATOR_UNIT_PRICE = 0.35;
 const EARTH_STAKE_UNIT_PRICE = 4.5;
+const CORNER_STAY_UNIT_PRICE = 3.2;
 const GATE_BREAKER_UNIT_PRICE = 28;
 const BALANCE_OF_SYSTEM_PCT = 0.1; // strainers, joiners, warning signs, cable ties, connectors
 const BACKUP_BATTERY_DOD = 0.5; // sealed lead-acid, conservative
+
+const FENCE_ACCESSORY_CATEGORY_LABEL: Record<FenceAccessoryCategory, string> = {
+  COMPRESSION_SPRING: 'Compression spring',
+  HOOK: 'Hook',
+  COPPER_FERRULE: 'Copper ferrule',
+  FENCE_LIGHT: 'Fence light',
+  LIGHTNING_DIVERTER: 'Lightning diverter',
+  OTHER: 'Accessory',
+};
 
 function bomLine(label: string, detail: string, qty: number, unitPriceUsd: number): BomLine {
   return { label, detail, qty, unitPriceUsd, totalUsd: Math.round(qty * unitPriceUsd * 100) / 100 };
@@ -37,8 +49,13 @@ function pickWire(catalog: FenceCatalog, type: FenceConfig['wireType']): Catalog
   return pool.find((w) => w.type === type) ?? pool[0];
 }
 
-function pickPost(catalog: FenceCatalog, material: FenceConfig['postMaterial']): CatalogPost {
+// Prefers an exact material+shape match (e.g. square-tube bend posts for
+// corners); falls back to any post of the chosen material, then to the pool,
+// so an incomplete catalog never crashes the calculator.
+function pickPost(catalog: FenceCatalog, material: FenceConfig['postMaterial'], shape: FenceConfig['postShape']): CatalogPost {
   const pool = catalog.posts.length ? catalog.posts : POSTS;
+  const exact = pool.find((p) => p.material === material && p.shape === shape);
+  if (exact) return exact;
   return pool.find((p) => p.material === material) ?? pool[0];
 }
 
@@ -48,6 +65,8 @@ export function defaultFenceConfig(): FenceConfig {
     wireType: 'HT_WIRE',
     postSpacingM: 3,
     postMaterial: 'STEEL',
+    postShape: 'STANDARD',
+    cornerStaysPerCorner: 2,
     gateCount: 1,
     powerSource: 'MAINS_WITH_BACKUP',
     backupHours: 8,
@@ -57,6 +76,7 @@ export function defaultFenceConfig(): FenceConfig {
     clientName: '',
     siteName: '',
     notes: '',
+    accessories: [],
   };
 }
 
@@ -88,19 +108,26 @@ export function computeFenceDesign(zones: FenceZone[], config: FenceConfig, cata
     });
   }
 
-  const post = pickPost(catalog, config.postMaterial);
+  const post = pickPost(catalog, config.postMaterial, config.postShape);
   const postCount = Math.max(1, Math.ceil(totalPerimeterM / Math.max(0.5, config.postSpacingM))) + totalCorners;
-  const insulatorCount = postCount * strandCount;
+  const insulatorCount = post.insulatorsIncluded ? 0 : postCount * strandCount;
   const earthStakeCount = Math.max(3, Math.ceil((energizer.joulesOutput * energizerCount) / 3));
+  const cornerStayCount = totalCorners * Math.max(0, config.cornerStaysPerCorner);
 
+  // Every energizer ships with its own bundled backup battery — only size
+  // additional batteries for the backup hours that bundle can't cover.
   let battery = null as FenceDesignResult['battery'];
   let batteryCount = 0;
   if (config.powerSource !== 'MAINS') {
     const requiredAh = (energizer.currentDrawA * energizerCount * config.backupHours) / BACKUP_BATTERY_DOD;
-    const pool = catalog.batteries.length ? catalog.batteries : BATTERIES;
-    const fit = pool.slice().sort((a, b) => a.ah - b.ah).find((b) => b.ah >= requiredAh) ?? pool.slice().sort((a, b) => b.ah - a.ah)[0];
-    battery = fit;
-    batteryCount = fit.ah > 0 ? Math.max(1, Math.ceil(requiredAh / fit.ah)) : 1;
+    const coveredAh = energizer.bundledBatteryAh * energizerCount;
+    const additionalAh = Math.max(0, requiredAh - coveredAh);
+    if (additionalAh > 0) {
+      const pool = catalog.batteries.length ? catalog.batteries : BATTERIES;
+      const fit = pool.slice().sort((a, b) => a.ah - b.ah).find((b) => b.ah >= additionalAh) ?? pool.slice().sort((a, b) => b.ah - a.ah)[0];
+      battery = fit;
+      batteryCount = fit.ah > 0 ? Math.max(1, Math.ceil(additionalAh / fit.ah)) : 1;
+    }
   }
 
   const monitor = config.monitoringEnabled
@@ -112,20 +139,38 @@ export function computeFenceDesign(zones: FenceZone[], config: FenceConfig, cata
       })()
     : null;
 
+  const bundledParts = [energizer.bundledBatteryAh > 0 ? `${energizer.bundledBatteryAh}Ah battery` : '', energizer.bundledSiren ? 'siren' : ''].filter(Boolean);
+  const energizerDetail = bundledParts.length ? `Fence energizer (incl. ${bundledParts.join(' + ')})` : 'Fence energizer';
+  const postDetail = `${post.material.toLowerCase()} post, ${config.postSpacingM}m spacing${post.insulatorsIncluded ? ' — bobbin insulators pre-fitted' : ''}`;
+
   const bom: BomLine[] = [];
-  bom.push(bomLine(`${energizer.brand} ${energizer.model}`, 'Fence energizer', energizerCount, energizer.priceUsd));
+  bom.push(bomLine(`${energizer.brand} ${energizer.model}`, energizerDetail, energizerCount, energizer.priceUsd));
   bom.push(bomLine(`${wire.brand} ${wire.model}`, `${wire.spoolLengthM}m spool`, wireSpoolsNeeded, wire.priceUsdPerSpool));
-  bom.push(bomLine(`${post.brand} ${post.model}`, `${post.material.toLowerCase()} post, ${config.postSpacingM}m spacing`, postCount, post.priceUsd));
-  bom.push(bomLine('Line insulators', `${strandCount} strands × ${postCount} posts`, insulatorCount, INSULATOR_UNIT_PRICE));
+  bom.push(bomLine(`${post.brand} ${post.model}`, postDetail, postCount, post.priceUsd));
+  if (insulatorCount > 0) {
+    bom.push(bomLine('Line insulators', `${strandCount} strands × ${postCount} posts`, insulatorCount, INSULATOR_UNIT_PRICE));
+  }
   bom.push(bomLine('Earth stakes', 'Galvanised earth rod + clamp', earthStakeCount, EARTH_STAKE_UNIT_PRICE));
+  if (cornerStayCount > 0) {
+    bom.push(bomLine('Corner stays', `${config.cornerStaysPerCorner} per corner × ${totalCorners} corners`, cornerStayCount, CORNER_STAY_UNIT_PRICE));
+  }
   if (config.gateCount > 0) {
     bom.push(bomLine('Gate breaker kit', 'Spring-loaded gate handle + insulated hook', config.gateCount, GATE_BREAKER_UNIT_PRICE));
   }
   if (battery && batteryCount > 0) {
-    bom.push(bomLine(`${battery.brand} ${battery.model}`, `Backup battery (${config.backupHours}h autonomy)`, batteryCount, battery.priceUsd));
+    bom.push(bomLine(`${battery.brand} ${battery.model}`, `Additional backup battery beyond the energizer's bundled ${energizer.bundledBatteryAh}Ah (${config.backupHours}h autonomy)`, batteryCount, battery.priceUsd));
   }
   if (monitor) {
     bom.push(bomLine(`${monitor.brand} ${monitor.model}`, `${zones.length}-zone monitoring${config.gsmAlertEnabled ? ' + GSM alert' : ''}`, 1, monitor.priceUsd));
+  }
+
+  const accessoryPool = catalog.accessories.length ? catalog.accessories : FENCE_ACCESSORIES;
+  const accessoryById = new Map<string, CatalogFenceAccessory>(accessoryPool.map((a) => [a.id, a]));
+  for (const sel of config.accessories) {
+    if (sel.qty <= 0) continue;
+    const acc = accessoryById.get(sel.id);
+    if (!acc) continue;
+    bom.push(bomLine(`${acc.brand} ${acc.model}`, `${FENCE_ACCESSORY_CATEGORY_LABEL[acc.category]} · ${acc.spec}`, sel.qty, acc.priceUsd));
   }
 
   const equipmentSubtotal = bom.reduce((s, l) => s + l.totalUsd, 0);
@@ -160,6 +205,7 @@ export function computeFenceDesign(zones: FenceZone[], config: FenceConfig, cata
 
     post,
     postCount,
+    cornerStayCount,
     insulatorCount,
     earthStakeCount,
 
@@ -177,4 +223,4 @@ export function computeFenceDesign(zones: FenceZone[], config: FenceConfig, cata
   };
 }
 
-export { ENERGIZERS, WIRES, POSTS, MONITORS, BATTERIES };
+export { ENERGIZERS, WIRES, POSTS, MONITORS, BATTERIES, FENCE_ACCESSORIES };
