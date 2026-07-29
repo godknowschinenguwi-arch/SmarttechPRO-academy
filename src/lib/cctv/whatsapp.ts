@@ -16,7 +16,7 @@ export function buildCctvWhatsAppMessage(design: CctvDesignResult, config: CctvC
   if (location) lines.push(`📍 Location: ${location}`);
 
   lines.push('');
-  lines.push(`📹 Cameras: ${design.cameraCount} · ${design.nvr.channels}CH NVR · ${design.totalStorageTb.toFixed(1)}TB storage`);
+  lines.push(`📹 ${config.systemType === 'IP' ? 'IP' : 'Analog'} system · Cameras: ${design.cameraCount} · ${design.nvr.channels}CH ${config.systemType === 'IP' ? 'NVR' : 'DVR'} · ${design.totalStorageTb.toFixed(1)}TB storage`);
   lines.push(`💰 Estimated cost: $${design.totalUsd.toLocaleString()}`);
 
   if (contact.message) {

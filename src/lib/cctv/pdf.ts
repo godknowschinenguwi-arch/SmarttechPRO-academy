@@ -3,6 +3,7 @@
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from 'pdf-lib';
 import QRCode from 'qrcode';
 import { sanitizeForPdf } from '../pdfText';
+import { ANY_BRAND } from './types';
 import type { CctvDesignResult, CctvConfig } from './types';
 
 const BLUE = rgb(0.08, 0.22, 0.56);
@@ -109,6 +110,8 @@ export async function generateCctvProposalPdf({ design, config, appUrl }: CctvPr
   text(p1, 'Engineering summary', margin, y, helvBold, 11, INK);
   y -= 16;
   const engRows: [string, string][] = [
+    ['System type', config.systemType === 'IP' ? 'IP (network / PoE)' : 'Analog (coax / DVR)'],
+    ['Brand', config.brand === ANY_BRAND ? 'No preference' : config.brand],
     ['Total network bandwidth', `${design.totalBitrateMbps.toFixed(0)} Mbps`],
     ['Daily storage', `${design.dailyStorageGb.toFixed(1)} GB/day`],
     ['PoE power budget', design.totalPoeW > 0 ? `${design.totalPoeW.toFixed(0)} W` : 'N/A (analog)'],

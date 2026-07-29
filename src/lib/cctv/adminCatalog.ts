@@ -31,18 +31,20 @@ export function coerceCatalogFields(kind: CatalogKind, body: Record<string, unkn
   if (has('priceUsd')) out.priceUsd = Math.max(0, num(body.priceUsd));
 
   if (kind === 'camera') {
+    if (has('systemType')) out.systemType = body.systemType === 'ANALOG' ? 'ANALOG' : 'IP';
     if (has('type')) out.type = ['DOME', 'BULLET', 'TURRET', 'PTZ'].includes(body.type as string) ? body.type : 'DOME';
     if (has('environment')) out.environment = body.environment === 'OUTDOOR' ? 'OUTDOOR' : 'INDOOR';
     if (has('resolutionMp')) out.resolutionMp = Math.max(1, num(body.resolutionMp, 4));
     if (has('lowLight')) out.lowLight = !!body.lowLight;
     if (has('poeWatts')) out.poeWatts = Math.max(0, num(body.poeWatts));
   } else if (kind === 'nvr') {
+    if (has('systemType')) out.systemType = body.systemType === 'ANALOG' ? 'ANALOG' : 'IP';
     if (has('channels')) out.channels = Math.max(1, num(body.channels, 4));
     if (has('poePorts')) out.poePorts = Math.max(0, num(body.poePorts));
     if (has('poeBudgetW')) out.poeBudgetW = Math.max(0, num(body.poeBudgetW));
     if (has('maxHddBays')) out.maxHddBays = Math.max(1, num(body.maxHddBays, 1));
   } else if (kind === 'hdd') {
-    if (has('capacityTb')) out.capacityTb = Math.max(0.1, num(body.capacityTb, 1));
+    if (has('capacityTb')) out.capacityTb = Math.max(1, num(body.capacityTb, 1));
   } else if (kind === 'cable') {
     if (has('type')) out.type = body.type === 'COAX_POWER' ? 'COAX_POWER' : 'CAT6';
     if (has('spoolLengthM')) out.spoolLengthM = Math.max(1, num(body.spoolLengthM));
@@ -50,15 +52,19 @@ export function coerceCatalogFields(kind: CatalogKind, body: Record<string, unkn
   } else if (kind === 'poeSwitch') {
     if (has('ports')) out.ports = Math.max(1, num(body.ports, 8));
     if (has('poeBudgetW')) out.poeBudgetW = Math.max(0, num(body.poeBudgetW));
+  } else if (kind === 'accessory') {
+    if (has('category')) out.category = ['CABINET', 'MONITOR', 'HDMI_CABLE', 'HDMI_SPLITTER', 'OTHER'].includes(body.category as string) ? body.category : 'OTHER';
+    if (has('spec')) out.spec = str(body.spec, '');
   }
 
   return out;
 }
 
 export const REQUIRED_FIELDS: Record<CatalogKind, string[]> = {
-  camera: ['brand', 'model', 'type', 'environment', 'resolutionMp', 'poeWatts', 'priceUsd'],
-  nvr: ['brand', 'model', 'channels', 'poePorts', 'poeBudgetW', 'maxHddBays', 'priceUsd'],
+  camera: ['brand', 'model', 'systemType', 'type', 'environment', 'resolutionMp', 'poeWatts', 'priceUsd'],
+  nvr: ['brand', 'model', 'systemType', 'channels', 'poePorts', 'poeBudgetW', 'maxHddBays', 'priceUsd'],
   hdd: ['brand', 'model', 'capacityTb', 'priceUsd'],
   cable: ['brand', 'model', 'type', 'spoolLengthM', 'priceUsdPerSpool'],
   poeSwitch: ['brand', 'model', 'ports', 'poeBudgetW', 'priceUsd'],
+  accessory: ['category', 'brand', 'model', 'spec', 'priceUsd'],
 };

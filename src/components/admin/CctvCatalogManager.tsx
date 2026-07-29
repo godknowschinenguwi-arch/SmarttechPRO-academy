@@ -1,13 +1,14 @@
 'use client';
 import { useState } from 'react';
 import CatalogTable, { type ColumnSpec, type WithMeta } from './CatalogTable';
-import type { CatalogCamera, CatalogNvr, CatalogHdd, CatalogCable, CatalogPoeSwitch } from '@/lib/cctv/types';
+import type { CatalogCamera, CatalogNvr, CatalogHdd, CatalogCable, CatalogPoeSwitch, CatalogAccessory } from '@/lib/cctv/types';
 
-type Kind = 'camera' | 'nvr' | 'hdd' | 'cable' | 'poeSwitch';
+type Kind = 'camera' | 'nvr' | 'hdd' | 'cable' | 'poeSwitch' | 'accessory';
 
 const CAMERA_COLUMNS: ColumnSpec<Omit<CatalogCamera, 'id'>>[] = [
   { key: 'brand', label: 'Brand', type: 'text' },
   { key: 'model', label: 'Model', type: 'text' },
+  { key: 'systemType', label: 'System', type: 'select', options: ['IP', 'ANALOG'] },
   { key: 'type', label: 'Type', type: 'select', options: ['DOME', 'BULLET', 'TURRET', 'PTZ'] },
   { key: 'environment', label: 'Environment', type: 'select', options: ['INDOOR', 'OUTDOOR'] },
   { key: 'resolutionMp', label: 'Resolution (MP)', type: 'number' },
@@ -19,6 +20,7 @@ const CAMERA_COLUMNS: ColumnSpec<Omit<CatalogCamera, 'id'>>[] = [
 const NVR_COLUMNS: ColumnSpec<Omit<CatalogNvr, 'id'>>[] = [
   { key: 'brand', label: 'Brand', type: 'text' },
   { key: 'model', label: 'Model', type: 'text' },
+  { key: 'systemType', label: 'System', type: 'select', options: ['IP', 'ANALOG'] },
   { key: 'channels', label: 'Channels', type: 'number' },
   { key: 'poePorts', label: 'PoE ports', type: 'number' },
   { key: 'poeBudgetW', label: 'PoE budget (W)', type: 'number' },
@@ -29,7 +31,7 @@ const NVR_COLUMNS: ColumnSpec<Omit<CatalogNvr, 'id'>>[] = [
 const HDD_COLUMNS: ColumnSpec<Omit<CatalogHdd, 'id'>>[] = [
   { key: 'brand', label: 'Brand', type: 'text' },
   { key: 'model', label: 'Model', type: 'text' },
-  { key: 'capacityTb', label: 'Capacity (TB)', type: 'number', step: 0.5 },
+  { key: 'capacityTb', label: 'Capacity (TB, min 1)', type: 'number', step: 1 },
   { key: 'priceUsd', label: 'Price ($)', type: 'number' },
 ];
 
@@ -49,11 +51,19 @@ const POE_SWITCH_COLUMNS: ColumnSpec<Omit<CatalogPoeSwitch, 'id'>>[] = [
   { key: 'priceUsd', label: 'Price ($)', type: 'number' },
 ];
 
+const ACCESSORY_COLUMNS: ColumnSpec<Omit<CatalogAccessory, 'id'>>[] = [
+  { key: 'category', label: 'Category', type: 'select', options: ['CABINET', 'MONITOR', 'HDMI_CABLE', 'HDMI_SPLITTER', 'OTHER'] },
+  { key: 'brand', label: 'Brand', type: 'text' },
+  { key: 'model', label: 'Model', type: 'text' },
+  { key: 'spec', label: 'Spec (e.g. size, length)', type: 'text' },
+  { key: 'priceUsd', label: 'Price ($)', type: 'number' },
+];
+
 function emptyCamera(): Omit<CatalogCamera, 'id'> {
-  return { brand: '', model: '', type: 'DOME', environment: 'INDOOR', resolutionMp: 4, lowLight: false, poeWatts: 7, priceUsd: 52 };
+  return { brand: '', model: '', systemType: 'IP', type: 'DOME', environment: 'INDOOR', resolutionMp: 4, lowLight: false, poeWatts: 7, priceUsd: 52 };
 }
 function emptyNvr(): Omit<CatalogNvr, 'id'> {
-  return { brand: '', model: '', channels: 8, poePorts: 8, poeBudgetW: 96, maxHddBays: 2, priceUsd: 175 };
+  return { brand: '', model: '', systemType: 'IP', channels: 8, poePorts: 8, poeBudgetW: 96, maxHddBays: 2, priceUsd: 175 };
 }
 function emptyHdd(): Omit<CatalogHdd, 'id'> {
   return { brand: '', model: '', capacityTb: 2, priceUsd: 65 };
@@ -64,6 +74,9 @@ function emptyCable(): Omit<CatalogCable, 'id'> {
 function emptyPoeSwitch(): Omit<CatalogPoeSwitch, 'id'> {
   return { brand: '', model: '', ports: 8, poeBudgetW: 124, priceUsd: 85 };
 }
+function emptyAccessory(): Omit<CatalogAccessory, 'id'> {
+  return { category: 'MONITOR', brand: '', model: '', spec: '', priceUsd: 100 };
+}
 
 const TABS: { id: Kind; label: string }[] = [
   { id: 'camera', label: 'Cameras' },
@@ -71,6 +84,7 @@ const TABS: { id: Kind; label: string }[] = [
   { id: 'hdd', label: 'Storage' },
   { id: 'cable', label: 'Cable' },
   { id: 'poeSwitch', label: 'PoE switches' },
+  { id: 'accessory', label: 'Accessories' },
 ];
 
 export default function CctvCatalogManager({
@@ -79,12 +93,14 @@ export default function CctvCatalogManager({
   hdds,
   cables,
   poeSwitches,
+  accessories,
 }: {
   cameras: WithMeta<CatalogCamera>[];
   nvrs: WithMeta<CatalogNvr>[];
   hdds: WithMeta<CatalogHdd>[];
   cables: WithMeta<CatalogCable>[];
   poeSwitches: WithMeta<CatalogPoeSwitch>[];
+  accessories: WithMeta<CatalogAccessory>[];
 }) {
   const [tab, setTab] = useState<Kind>('camera');
   const API_BASE = '/api/admin/cctv-catalog';
@@ -110,6 +126,7 @@ export default function CctvCatalogManager({
       {tab === 'hdd' && <CatalogTable apiBase={`${API_BASE}/hdd`} columns={HDD_COLUMNS} initialRows={hdds} emptyRow={emptyHdd()} />}
       {tab === 'cable' && <CatalogTable apiBase={`${API_BASE}/cable`} columns={CABLE_COLUMNS} initialRows={cables} emptyRow={emptyCable()} />}
       {tab === 'poeSwitch' && <CatalogTable apiBase={`${API_BASE}/poeSwitch`} columns={POE_SWITCH_COLUMNS} initialRows={poeSwitches} emptyRow={emptyPoeSwitch()} />}
+      {tab === 'accessory' && <CatalogTable apiBase={`${API_BASE}/accessory`} columns={ACCESSORY_COLUMNS} initialRows={accessories} emptyRow={emptyAccessory()} />}
     </div>
   );
 }

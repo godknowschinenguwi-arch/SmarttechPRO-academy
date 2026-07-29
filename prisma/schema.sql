@@ -308,13 +308,15 @@ CREATE TABLE IF NOT EXISTS FenceDesign (
 
 -- CCTV Calculator equipment catalog — admin-editable via /admin/cctv-catalog.
 CREATE TABLE IF NOT EXISTS CctvCamera (
-  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, type TEXT NOT NULL, environment TEXT NOT NULL,
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, systemType TEXT NOT NULL DEFAULT 'IP',
+  type TEXT NOT NULL, environment TEXT NOT NULL,
   resolutionMp REAL NOT NULL, lowLight INTEGER NOT NULL DEFAULT 0, poeWatts REAL NOT NULL,
   priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS CctvNvr (
-  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, channels REAL NOT NULL,
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, systemType TEXT NOT NULL DEFAULT 'IP',
+  channels REAL NOT NULL,
   poePorts REAL NOT NULL, poeBudgetW REAL NOT NULL, maxHddBays REAL NOT NULL,
   priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -334,6 +336,16 @@ CREATE TABLE IF NOT EXISTS CctvPoeSwitch (
   id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, ports REAL NOT NULL,
   poeBudgetW REAL NOT NULL, priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1,
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Migration for CCTV catalog tables created before systemType existed
+-- (ignored by db.ts/seed.mjs when the column is already present).
+ALTER TABLE CctvCamera ADD COLUMN systemType TEXT NOT NULL DEFAULT 'IP';
+ALTER TABLE CctvNvr ADD COLUMN systemType TEXT NOT NULL DEFAULT 'IP';
+
+CREATE TABLE IF NOT EXISTS CctvAccessory (
+  id TEXT PRIMARY KEY, category TEXT NOT NULL, brand TEXT NOT NULL, model TEXT NOT NULL, spec TEXT NOT NULL,
+  priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- Cloud-saved CCTV designs, tied to a signed-in account.
