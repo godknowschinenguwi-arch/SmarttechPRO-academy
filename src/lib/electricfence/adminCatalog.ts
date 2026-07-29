@@ -38,6 +38,8 @@ export function coerceCatalogFields(kind: CatalogKind, body: Record<string, unkn
       const arr = Array.isArray(body.voltageOptions) ? body.voltageOptions.filter((v) => v === 12 || v === 24) : [];
       out.voltageOptions = arr.length ? arr : [12];
     }
+    if (has('bundledBatteryAh')) out.bundledBatteryAh = Math.max(0, num(body.bundledBatteryAh));
+    if (has('bundledSiren')) out.bundledSiren = !!body.bundledSiren;
   } else if (kind === 'wire') {
     if (has('type')) out.type = body.type === 'BRAIDED_WIRE' ? 'BRAIDED_WIRE' : 'HT_WIRE';
     if (has('ohmsPerKm')) out.ohmsPerKm = Math.max(0, num(body.ohmsPerKm));
@@ -45,22 +47,28 @@ export function coerceCatalogFields(kind: CatalogKind, body: Record<string, unkn
     if (has('priceUsdPerSpool')) out.priceUsdPerSpool = Math.max(0, num(body.priceUsdPerSpool));
   } else if (kind === 'post') {
     if (has('material')) out.material = ['STEEL', 'TIMBER', 'CONCRETE'].includes(body.material as string) ? body.material : 'STEEL';
+    if (has('shape')) out.shape = ['STANDARD', 'SQUARE_STRAIGHT', 'SQUARE_BEND'].includes(body.shape as string) ? body.shape : 'STANDARD';
     if (has('heightM')) out.heightM = Math.max(0.1, num(body.heightM));
+    if (has('insulatorsIncluded')) out.insulatorsIncluded = !!body.insulatorsIncluded;
   } else if (kind === 'monitor') {
     if (has('maxZones')) out.maxZones = Math.max(1, num(body.maxZones));
     if (has('gsmCapable')) out.gsmCapable = !!body.gsmCapable;
   } else if (kind === 'battery') {
     if (has('voltage')) out.voltage = Math.max(1, num(body.voltage));
     if (has('ah')) out.ah = Math.max(1, num(body.ah));
+  } else if (kind === 'accessory') {
+    if (has('category')) out.category = ['COMPRESSION_SPRING', 'HOOK', 'COPPER_FERRULE', 'FENCE_LIGHT', 'LIGHTNING_DIVERTER', 'OTHER'].includes(body.category as string) ? body.category : 'OTHER';
+    if (has('spec')) out.spec = str(body.spec, '');
   }
 
   return out;
 }
 
 export const REQUIRED_FIELDS: Record<CatalogKind, string[]> = {
-  energizer: ['brand', 'model', 'joulesOutput', 'maxFenceKm', 'currentDrawA', 'priceUsd'],
+  energizer: ['brand', 'model', 'joulesOutput', 'maxFenceKm', 'currentDrawA', 'bundledBatteryAh', 'priceUsd'],
   wire: ['brand', 'model', 'type', 'ohmsPerKm', 'spoolLengthM', 'priceUsdPerSpool'],
-  post: ['brand', 'model', 'material', 'heightM', 'priceUsd'],
+  post: ['brand', 'model', 'material', 'shape', 'heightM', 'priceUsd'],
   monitor: ['brand', 'model', 'maxZones', 'priceUsd'],
   battery: ['brand', 'model', 'voltage', 'ah', 'priceUsd'],
+  accessory: ['category', 'brand', 'model', 'spec', 'priceUsd'],
 };

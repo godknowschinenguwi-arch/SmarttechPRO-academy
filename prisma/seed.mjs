@@ -123,22 +123,36 @@ async function backfillSolarCatalog() {
 }
 
 // Electric Fence Calculator equipment catalog — same seed-once-if-empty pattern.
-const FENCE_ENERGIZERS = [
-  { brand: 'Nemtek', model: 'Alpha AS1000 (1J)', joulesOutput: 1, maxFenceKm: 4, currentDrawA: 0.1, voltageOptions: J([12]), priceUsd: 75 },
-  { brand: 'Nemtek', model: 'AS3000 (3J)', joulesOutput: 3, maxFenceKm: 10, currentDrawA: 0.15, voltageOptions: J([12]), priceUsd: 145 },
-  { brand: 'Stafix', model: 'X6 (6J)', joulesOutput: 6, maxFenceKm: 20, currentDrawA: 0.2, voltageOptions: J([12]), priceUsd: 260 },
-  { brand: 'Nemtek', model: 'AS10000 (10J)', joulesOutput: 10, maxFenceKm: 30, currentDrawA: 0.28, voltageOptions: J([12, 24]), priceUsd: 420 },
-  { brand: 'Stafix', model: 'XM10 (15J)', joulesOutput: 15, maxFenceKm: 45, currentDrawA: 0.35, voltageOptions: J([12, 24]), priceUsd: 650 },
+// Energizers ship standard with a 12V 7Ah backup battery and built-in siren.
+const FENCE_ENERGIZERS_BASE = [
+  { brand: 'Nemtek', model: 'Alpha AS1000 (1J)', joulesOutput: 1, maxFenceKm: 4, currentDrawA: 0.1, voltageOptions: J([12]), bundledBatteryAh: 7, bundledSiren: true, priceUsd: 75 },
+  { brand: 'Nemtek', model: 'AS3000 (3J)', joulesOutput: 3, maxFenceKm: 10, currentDrawA: 0.15, voltageOptions: J([12]), bundledBatteryAh: 7, bundledSiren: true, priceUsd: 145 },
+  { brand: 'Stafix', model: 'X6 (6J)', joulesOutput: 6, maxFenceKm: 20, currentDrawA: 0.2, voltageOptions: J([12]), bundledBatteryAh: 7, bundledSiren: true, priceUsd: 260 },
+  { brand: 'Nemtek', model: 'AS10000 (10J)', joulesOutput: 10, maxFenceKm: 30, currentDrawA: 0.28, voltageOptions: J([12, 24]), bundledBatteryAh: 7, bundledSiren: true, priceUsd: 420 },
+  { brand: 'Stafix', model: 'XM10 (15J)', joulesOutput: 15, maxFenceKm: 45, currentDrawA: 0.35, voltageOptions: J([12, 24]), bundledBatteryAh: 7, bundledSiren: true, priceUsd: 650 },
 ];
+const FENCE_ENERGIZERS_WIZARD = [
+  { brand: 'Nemtek', model: 'Wizard J4 (4J)', joulesOutput: 4, maxFenceKm: 12, currentDrawA: 0.18, voltageOptions: J([12]), bundledBatteryAh: 7, bundledSiren: true, priceUsd: 185 },
+  { brand: 'Nemtek', model: 'Wizard J8 (8J)', joulesOutput: 8, maxFenceKm: 24, currentDrawA: 0.25, voltageOptions: J([12]), bundledBatteryAh: 7, bundledSiren: true, priceUsd: 340 },
+];
+const FENCE_ENERGIZERS = [...FENCE_ENERGIZERS_BASE, ...FENCE_ENERGIZERS_WIZARD];
+
 const FENCE_WIRES = [
   { brand: 'Cyclone', model: '2.5mm Galvanised High-Tensile', type: 'HT_WIRE', ohmsPerKm: 2.0, spoolLengthM: 500, priceUsdPerSpool: 45 },
   { brand: 'Nemtek', model: '6-Strand Conductive Braid', type: 'BRAIDED_WIRE', ohmsPerKm: 15, spoolLengthM: 200, priceUsdPerSpool: 38 },
 ];
-const FENCE_POSTS = [
-  { brand: 'SmartTech', model: 'Steel Y-Standard 1.8m', material: 'STEEL', heightM: 1.8, priceUsd: 6.5 },
-  { brand: 'SmartTech', model: 'Treated Gum Pole 2.1m', material: 'TIMBER', heightM: 2.1, priceUsd: 4.2 },
-  { brand: 'SmartTech', model: 'Precast Concrete 2.1m', material: 'CONCRETE', heightM: 2.1, priceUsd: 9.8 },
+
+const FENCE_POSTS_BASE = [
+  { brand: 'SmartTech', model: 'Steel Y-Standard 1.8m', material: 'STEEL', shape: 'STANDARD', heightM: 1.8, insulatorsIncluded: false, priceUsd: 6.5 },
+  { brand: 'SmartTech', model: 'Treated Gum Pole 2.1m', material: 'TIMBER', shape: 'STANDARD', heightM: 2.1, insulatorsIncluded: false, priceUsd: 4.2 },
+  { brand: 'SmartTech', model: 'Precast Concrete 2.1m', material: 'CONCRETE', shape: 'STANDARD', heightM: 2.1, insulatorsIncluded: false, priceUsd: 9.8 },
 ];
+const FENCE_POSTS_SQUARE_TUBE = [
+  { brand: 'SmartTech', model: 'Square Tube Post — Straight 1.8m (bobbins fitted)', material: 'STEEL', shape: 'SQUARE_STRAIGHT', heightM: 1.8, insulatorsIncluded: true, priceUsd: 8.9 },
+  { brand: 'SmartTech', model: 'Square Tube Post — Bend 1.8m (bobbins fitted)', material: 'STEEL', shape: 'SQUARE_BEND', heightM: 1.8, insulatorsIncluded: true, priceUsd: 9.8 },
+];
+const FENCE_POSTS = [...FENCE_POSTS_BASE, ...FENCE_POSTS_SQUARE_TUBE];
+
 const FENCE_MONITORS = [
   { brand: 'Nemtek', model: '4-Zone LCD Monitor', maxZones: 4, gsmCapable: false, priceUsd: 180 },
   { brand: 'Nemtek', model: '8-Zone LCD Monitor + GSM', maxZones: 8, gsmCapable: true, priceUsd: 340 },
@@ -149,6 +163,18 @@ const FENCE_BATTERIES = [
   { brand: 'SmartTech Power', model: 'SLA 12V 18Ah', voltage: 12, ah: 18, priceUsd: 42 },
   { brand: 'SmartTech Power', model: 'SLA 12V 38Ah', voltage: 12, ah: 38, priceUsd: 78 },
 ];
+const FENCE_ACCESSORIES = [
+  { category: 'COMPRESSION_SPRING', brand: 'Nemtek', model: 'Compression Spring', spec: 'Light-duty', priceUsd: 1.8 },
+  { category: 'COMPRESSION_SPRING', brand: 'Nemtek', model: 'Compression Spring', spec: 'Heavy-duty', priceUsd: 2.6 },
+  { category: 'HOOK', brand: 'Nemtek', model: 'Line Hook', spec: 'Standard', priceUsd: 0.6 },
+  { category: 'HOOK', brand: 'Nemtek', model: 'Insulated Gate Hook', spec: 'Spring-loaded', priceUsd: 3.5 },
+  { category: 'COPPER_FERRULE', brand: 'Nemtek', model: 'Copper Ferrule', spec: '2.5mm wire', priceUsd: 0.25 },
+  { category: 'FENCE_LIGHT', brand: 'Nemtek', model: 'Solar Fence Light', spec: 'Flashing, dusk-to-dawn', priceUsd: 14 },
+  { category: 'FENCE_LIGHT', brand: 'Nemtek', model: 'Strobe Warning Light', spec: '12V, energizer-triggered', priceUsd: 22 },
+  { category: 'LIGHTNING_DIVERTER', brand: 'Nemtek', model: 'Lightning Diverter', spec: 'Standard, single fence line', priceUsd: 18 },
+  { category: 'LIGHTNING_DIVERTER', brand: 'Nemtek', model: 'Lightning Diverter', spec: 'Heavy-duty, multi-strand', priceUsd: 28 },
+  { category: 'OTHER', brand: 'SmartTech', model: 'Electric Fence Warning Sign', spec: 'Regulatory, weatherproof', priceUsd: 2.2 },
+];
 
 async function backfillFenceCatalog() {
   const tables = [
@@ -157,6 +183,7 @@ async function backfillFenceCatalog() {
     ['FencePost', FENCE_POSTS],
     ['FenceMonitor', FENCE_MONITORS],
     ['FenceBattery', FENCE_BATTERIES],
+    ['FenceAccessory', FENCE_ACCESSORIES],
   ];
   for (const [table, rows] of tables) {
     const existing = await db.execute(`SELECT COUNT(*) AS n FROM ${table}`);
@@ -164,6 +191,25 @@ async function backfillFenceCatalog() {
     for (const row of rows) await ins(table, { ...row, active: true });
   }
   console.log('Electric fence equipment catalog seeded.');
+}
+
+// Migrates a fence catalog seeded before post shape/insulatorsIncluded and
+// accessories existed (bundledBatteryAh/bundledSiren need no correction —
+// the ALTER TABLE default of 7Ah + siren is already correct for every
+// pre-existing energizer row): inserts any new Wizard energizer, square-tube
+// post and accessory rows a pre-existing catalog is missing. Matches by
+// brand+model so it's safe to re-run on every boot.
+async function migrateFenceCatalog() {
+  async function insertIfMissing(table, row) {
+    const existing = await db.execute({ sql: `SELECT id FROM ${table} WHERE brand = ? AND model = ?`, args: [row.brand, row.model] });
+    if (existing.rows.length > 0) return;
+    await ins(table, { ...row, active: true });
+  }
+
+  for (const row of FENCE_ENERGIZERS_WIZARD) await insertIfMissing('FenceEnergizer', row);
+  for (const row of FENCE_POSTS_SQUARE_TUBE) await insertIfMissing('FencePost', row);
+  for (const row of FENCE_ACCESSORIES) await insertIfMissing('FenceAccessory', row);
+  console.log('Electric fence catalog migration + accessories backfilled.');
 }
 
 // CCTV Calculator equipment catalog — same seed-once-if-empty pattern.
@@ -325,6 +371,7 @@ async function main() {
   await backfillComingSoon();
   await backfillSolarCatalog();
   await backfillFenceCatalog();
+  await migrateFenceCatalog();
   await backfillCctvCatalog();
   await migrateCctvSystemTypesAndAccessories();
 

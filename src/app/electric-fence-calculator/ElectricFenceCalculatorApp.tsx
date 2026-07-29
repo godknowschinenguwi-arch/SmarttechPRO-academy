@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import ZoneBuilder from '@/components/electricfence/ZoneBuilder';
 import FenceConfigPanel from '@/components/electricfence/FenceConfigPanel';
+import AccessoryPicker from '@/components/electricfence/AccessoryPicker';
 import FenceResultsPanel from '@/components/electricfence/FenceResultsPanel';
 import ScenarioCompare from '@/components/electricfence/ScenarioCompare';
 import RequestQuoteModal from '@/components/electricfence/RequestQuoteModal';
@@ -9,15 +10,16 @@ import AiAssistantWidget from '@/components/AiAssistantWidget';
 import { computeFenceDesign, defaultFenceConfig, defaultFenceZones, DEFAULT_FENCE_CATALOG } from '@/lib/electricfence/engine';
 import { buildFenceWhatsAppMessage } from '@/lib/electricfence/whatsapp';
 import { whatsappLink } from '@/lib/contact';
-import type { FenceZone, FenceScenario, FenceCatalog } from '@/lib/electricfence/types';
+import type { FenceZone, FenceScenario, FenceCatalog, SelectedAccessory } from '@/lib/electricfence/types';
 
 const STORAGE_KEY = 'sta_fence_scenarios_v1';
 
 const TABS = [
   { id: 'zones', label: '1. Zones' },
   { id: 'config', label: '2. Fence & power' },
-  { id: 'design', label: '3. Design' },
-  { id: 'compare', label: '4. Compare' },
+  { id: 'accessories', label: '3. Accessories' },
+  { id: 'design', label: '4. Design' },
+  { id: 'compare', label: '5. Compare' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -172,7 +174,14 @@ export default function ElectricFenceCalculatorApp({
 
       {tab === 'zones' && <ZoneBuilder zones={zones} onChange={setZones} />}
       {tab === 'config' && <FenceConfigPanel config={config} onChange={setConfig} />}
-      {tab === 'design' && <FenceResultsPanel design={design} />}
+      {tab === 'accessories' && (
+        <AccessoryPicker
+          catalog={catalog.accessories}
+          selected={config.accessories}
+          onChange={(accessories: SelectedAccessory[]) => setConfig({ ...config, accessories })}
+        />
+      )}
+      {tab === 'design' && <FenceResultsPanel design={design} config={config} />}
       {tab === 'compare' && (
         <ScenarioCompare
           scenarios={scenarios}

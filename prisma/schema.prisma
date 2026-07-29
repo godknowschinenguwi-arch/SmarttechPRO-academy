@@ -540,16 +540,18 @@ model OrganizationMember {
 }
 
 model FenceEnergizer {
-  id              String   @id @default(cuid())
-  brand           String
-  model           String
-  joulesOutput    Float
-  maxFenceKm      Float
-  currentDrawA    Float
-  voltageOptions  String // JSON-encoded number[]
-  priceUsd        Float
-  active          Boolean  @default(true)
-  createdAt       DateTime @default(now())
+  id               String   @id @default(cuid())
+  brand            String
+  model            String
+  joulesOutput     Float
+  maxFenceKm       Float
+  currentDrawA     Float
+  voltageOptions   String // JSON-encoded number[]
+  bundledBatteryAh Float    @default(7)
+  bundledSiren     Boolean  @default(true)
+  priceUsd         Float
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
 }
 
 model FenceWire {
@@ -565,14 +567,16 @@ model FenceWire {
 }
 
 model FencePost {
-  id        String   @id @default(cuid())
-  brand     String
-  model     String
-  material  String
-  heightM   Float
-  priceUsd  Float
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id                 String   @id @default(cuid())
+  brand              String
+  model              String
+  material           String
+  shape              String   @default("STANDARD") // 'STANDARD' | 'SQUARE_STRAIGHT' | 'SQUARE_BEND'
+  heightM            Float
+  insulatorsIncluded Boolean  @default(false)
+  priceUsd           Float
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
 }
 
 model FenceMonitor {
@@ -592,6 +596,17 @@ model FenceBattery {
   model     String
   voltage   Float
   ah        Float
+  priceUsd  Float
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model FenceAccessory {
+  id        String   @id @default(cuid())
+  category  String // 'COMPRESSION_SPRING' | 'HOOK' | 'COPPER_FERRULE' | 'FENCE_LIGHT' | 'LIGHTNING_DIVERTER' | 'OTHER'
+  brand     String
+  model     String
+  spec      String
   priceUsd  Float
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
