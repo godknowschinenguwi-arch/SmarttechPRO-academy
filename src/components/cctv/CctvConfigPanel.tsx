@@ -1,9 +1,26 @@
 'use client';
-import type { CctvConfig, Compression, RecordingMode } from '@/lib/cctv/types';
+import { useMemo } from 'react';
+import { ANY_BRAND } from '@/lib/cctv/types';
+import type { CctvConfig, CctvCatalog, Compression, RecordingMode, SystemType } from '@/lib/cctv/types';
 
-export default function CctvConfigPanel({ config, onChange }: { config: CctvConfig; onChange: (config: CctvConfig) => void }) {
+export default function CctvConfigPanel({ config, catalog, onChange }: { config: CctvConfig; catalog: CctvCatalog; onChange: (config: CctvConfig) => void }) {
   function set<K extends keyof CctvConfig>(key: K, value: CctvConfig[K]) {
     onChange({ ...config, [key]: value });
+  }
+
+  const brandsForSystem = useMemo(() => {
+    const set = new Set<string>();
+    for (const c of catalog.cameras) if (c.systemType === config.systemType) set.add(c.brand);
+    for (const n of catalog.nvrs) if (n.systemType === config.systemType) set.add(n.brand);
+    return Array.from(set).sort();
+  }, [catalog, config.systemType]);
+
+  function setSystemType(next: SystemType) {
+    const brands = new Set<string>();
+    for (const c of catalog.cameras) if (c.systemType === next) brands.add(c.brand);
+    for (const n of catalog.nvrs) if (n.systemType === next) brands.add(n.brand);
+    const brand = config.brand !== ANY_BRAND && !brands.has(config.brand) ? ANY_BRAND : config.brand;
+    onChange({ ...config, systemType: next, brand });
   }
 
   return (
@@ -20,23 +37,35 @@ export default function CctvConfigPanel({ config, onChange }: { config: CctvConf
         </div>
 
         <div>
-          <label className="mb-2 block text-xs font-semibold text-ink-soft">Connectivity</label>
+          <label className="mb-2 block text-xs font-semibold text-ink-soft">System type</label>
           <div className="grid gap-2">
             <button
-              onClick={() => set('usePoe', true)}
-              className={`rounded-xl border p-3 text-left transition ${config.usePoe ? 'border-brand-600 bg-brand-50' : 'border-surface-line hover:border-brand-300'}`}
+              onClick={() => setSystemType('IP')}
+              className={`rounded-xl border p-3 text-left transition ${config.systemType === 'IP' ? 'border-brand-600 bg-brand-50' : 'border-surface-line hover:border-brand-300'}`}
             >
-              <p className={`text-sm font-bold ${config.usePoe ? 'text-brand-700' : 'text-ink'}`}>IP cameras over PoE</p>
+              <p className={`text-sm font-bold ${config.systemType === 'IP' ? 'text-brand-700' : 'text-ink'}`}>IP cameras over PoE</p>
               <p className="text-xs text-ink-faint">Cat6 cabling, single-cable power + data, NVR.</p>
             </button>
             <button
-              onClick={() => set('usePoe', false)}
-              className={`rounded-xl border p-3 text-left transition ${!config.usePoe ? 'border-brand-600 bg-brand-50' : 'border-surface-line hover:border-brand-300'}`}
+              onClick={() => setSystemType('ANALOG')}
+              className={`rounded-xl border p-3 text-left transition ${config.systemType === 'ANALOG' ? 'border-brand-600 bg-brand-50' : 'border-surface-line hover:border-brand-300'}`}
             >
-              <p className={`text-sm font-bold ${!config.usePoe ? 'text-brand-700' : 'text-ink'}`}>Analog cameras</p>
+              <p className={`text-sm font-bold ${config.systemType === 'ANALOG' ? 'text-brand-700' : 'text-ink'}`}>Analog cameras</p>
               <p className="text-xs text-ink-faint">Coax + separate power run, DVR.</p>
             </button>
           </div>
+          <p className="mt-1.5 text-[11px] text-ink-faint">Cameras, the recorder, cabling and PoE gear all follow this choice — the design never mixes IP and analog equipment.</p>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-ink-soft">Brand</label>
+          <select className="input" value={config.brand} onChange={(e) => set('brand', e.target.value)}>
+            <option value={ANY_BRAND}>Any brand (cheapest suitable match)</option>
+            {brandsForSystem.map((b) => (
+              <option key={b} value={b}>{b} only</option>
+            ))}
+          </select>
+          <p className="mt-1.5 text-[11px] text-ink-faint">Locking a brand keeps cameras and the {config.systemType === 'IP' ? 'NVR' : 'DVR'} from the same manufacturer — no mixed-brand systems.</p>
         </div>
 
         <div className="border-t border-surface-line pt-4">

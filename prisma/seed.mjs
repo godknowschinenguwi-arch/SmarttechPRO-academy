@@ -167,23 +167,39 @@ async function backfillFenceCatalog() {
 }
 
 // CCTV Calculator equipment catalog — same seed-once-if-empty pattern.
-const CCTV_CAMERAS = [
-  { brand: 'Hikvision', model: 'DS-2CD1123G0 Dome 2MP', type: 'DOME', environment: 'INDOOR', resolutionMp: 2, lowLight: false, poeWatts: 6, priceUsd: 38 },
-  { brand: 'Hikvision', model: 'DS-2CD1143G0 Dome 4MP', type: 'DOME', environment: 'INDOOR', resolutionMp: 4, lowLight: false, poeWatts: 7, priceUsd: 52 },
-  { brand: 'Dahua', model: 'IPC-HDW2439 Turret 4MP', type: 'TURRET', environment: 'OUTDOOR', resolutionMp: 4, lowLight: false, poeWatts: 7, priceUsd: 55 },
-  { brand: 'Dahua', model: 'IPC-HFW2439 Bullet 4MP', type: 'BULLET', environment: 'OUTDOOR', resolutionMp: 4, lowLight: false, poeWatts: 8, priceUsd: 58 },
-  { brand: 'Dahua', model: 'IPC-HFW2439S Starlight 4MP', type: 'BULLET', environment: 'OUTDOOR', resolutionMp: 4, lowLight: true, poeWatts: 9, priceUsd: 78 },
-  { brand: 'Hikvision', model: 'DS-2CD2T87 Bullet 8MP (4K)', type: 'BULLET', environment: 'OUTDOOR', resolutionMp: 8, lowLight: false, poeWatts: 10, priceUsd: 110 },
-  { brand: 'Hikvision', model: 'DS-2DE4425 PTZ 4MP', type: 'PTZ', environment: 'OUTDOOR', resolutionMp: 4, lowLight: false, poeWatts: 30, priceUsd: 420 },
+const CCTV_CAMERAS_IP = [
+  { brand: 'Hikvision', model: 'DS-2CD1123G0 Dome 2MP', systemType: 'IP', type: 'DOME', environment: 'INDOOR', resolutionMp: 2, lowLight: false, poeWatts: 6, priceUsd: 38 },
+  { brand: 'Hikvision', model: 'DS-2CD1143G0 Dome 4MP', systemType: 'IP', type: 'DOME', environment: 'INDOOR', resolutionMp: 4, lowLight: false, poeWatts: 7, priceUsd: 52 },
+  { brand: 'Hikvision', model: 'DS-2CD2T87 Bullet 8MP (4K)', systemType: 'IP', type: 'BULLET', environment: 'OUTDOOR', resolutionMp: 8, lowLight: false, poeWatts: 10, priceUsd: 110 },
+  { brand: 'Hikvision', model: 'DS-2DE4425 PTZ 4MP', systemType: 'IP', type: 'PTZ', environment: 'OUTDOOR', resolutionMp: 4, lowLight: false, poeWatts: 30, priceUsd: 420 },
+  { brand: 'Dahua', model: 'IPC-HDW2439 Turret 4MP', systemType: 'IP', type: 'TURRET', environment: 'OUTDOOR', resolutionMp: 4, lowLight: false, poeWatts: 7, priceUsd: 55 },
+  { brand: 'Dahua', model: 'IPC-HFW2439 Bullet 4MP', systemType: 'IP', type: 'BULLET', environment: 'OUTDOOR', resolutionMp: 4, lowLight: false, poeWatts: 8, priceUsd: 58 },
+  { brand: 'Dahua', model: 'IPC-HFW2439S Starlight 4MP', systemType: 'IP', type: 'BULLET', environment: 'OUTDOOR', resolutionMp: 4, lowLight: true, poeWatts: 9, priceUsd: 78 },
 ];
-const CCTV_NVRS = [
-  { brand: 'Hikvision', model: 'DS-7604NI-K1 4CH PoE', channels: 4, poePorts: 4, poeBudgetW: 48, maxHddBays: 1, priceUsd: 95 },
-  { brand: 'Hikvision', model: 'DS-7608NI-K2 8CH PoE', channels: 8, poePorts: 8, poeBudgetW: 96, maxHddBays: 2, priceUsd: 175 },
-  { brand: 'Dahua', model: 'NVR4216-16P 16CH PoE', channels: 16, poePorts: 16, poeBudgetW: 150, maxHddBays: 2, priceUsd: 320 },
-  { brand: 'Dahua', model: 'NVR5432-16P 32CH', channels: 32, poePorts: 16, poeBudgetW: 200, maxHddBays: 4, priceUsd: 650 },
-  { brand: 'Dahua', model: 'XVR1B04 4CH Analog', channels: 4, poePorts: 0, poeBudgetW: 0, maxHddBays: 1, priceUsd: 65 },
-  { brand: 'Dahua', model: 'XVR1B08 8CH Analog', channels: 8, poePorts: 0, poeBudgetW: 0, maxHddBays: 1, priceUsd: 110 },
+const CCTV_CAMERAS_ANALOG = [
+  { brand: 'Hikvision', model: 'DS-2CE56D0T Turbo HD Dome 2MP', systemType: 'ANALOG', type: 'DOME', environment: 'INDOOR', resolutionMp: 2, lowLight: false, poeWatts: 0, priceUsd: 22 },
+  { brand: 'Hikvision', model: 'DS-2CE16D0T Turbo HD Bullet 2MP', systemType: 'ANALOG', type: 'BULLET', environment: 'OUTDOOR', resolutionMp: 2, lowLight: false, poeWatts: 0, priceUsd: 26 },
+  { brand: 'Hikvision', model: 'DS-2CE16H0T Turbo HD Bullet 5MP', systemType: 'ANALOG', type: 'BULLET', environment: 'OUTDOOR', resolutionMp: 5, lowLight: true, poeWatts: 0, priceUsd: 40 },
+  { brand: 'Dahua', model: 'HAC-HDW1200 HDCVI Dome 2MP', systemType: 'ANALOG', type: 'DOME', environment: 'INDOOR', resolutionMp: 2, lowLight: false, poeWatts: 0, priceUsd: 20 },
+  { brand: 'Dahua', model: 'HAC-HFW1200 HDCVI Bullet 2MP', systemType: 'ANALOG', type: 'BULLET', environment: 'OUTDOOR', resolutionMp: 2, lowLight: false, poeWatts: 0, priceUsd: 24 },
+  { brand: 'Dahua', model: 'HAC-HFW1500 HDCVI Bullet 5MP Starlight', systemType: 'ANALOG', type: 'BULLET', environment: 'OUTDOOR', resolutionMp: 5, lowLight: true, poeWatts: 0, priceUsd: 42 },
 ];
+const CCTV_CAMERAS = [...CCTV_CAMERAS_IP, ...CCTV_CAMERAS_ANALOG];
+
+const CCTV_NVRS_IP = [
+  { brand: 'Hikvision', model: 'DS-7604NI-K1 4CH PoE NVR', systemType: 'IP', channels: 4, poePorts: 4, poeBudgetW: 48, maxHddBays: 1, priceUsd: 95 },
+  { brand: 'Hikvision', model: 'DS-7608NI-K2 8CH PoE NVR', systemType: 'IP', channels: 8, poePorts: 8, poeBudgetW: 96, maxHddBays: 2, priceUsd: 175 },
+  { brand: 'Dahua', model: 'NVR4216-16P 16CH PoE NVR', systemType: 'IP', channels: 16, poePorts: 16, poeBudgetW: 150, maxHddBays: 2, priceUsd: 320 },
+  { brand: 'Dahua', model: 'NVR5432-16P 32CH NVR', systemType: 'IP', channels: 32, poePorts: 16, poeBudgetW: 200, maxHddBays: 4, priceUsd: 650 },
+];
+const CCTV_NVRS_ANALOG = [
+  { brand: 'Hikvision', model: 'DS-7204HUHI 4CH Turbo HD DVR', systemType: 'ANALOG', channels: 4, poePorts: 0, poeBudgetW: 0, maxHddBays: 1, priceUsd: 70 },
+  { brand: 'Hikvision', model: 'DS-7208HUHI 8CH Turbo HD DVR', systemType: 'ANALOG', channels: 8, poePorts: 0, poeBudgetW: 0, maxHddBays: 1, priceUsd: 115 },
+  { brand: 'Dahua', model: 'XVR1B04 4CH Analog', systemType: 'ANALOG', channels: 4, poePorts: 0, poeBudgetW: 0, maxHddBays: 1, priceUsd: 65 },
+  { brand: 'Dahua', model: 'XVR1B08 8CH Analog', systemType: 'ANALOG', channels: 8, poePorts: 0, poeBudgetW: 0, maxHddBays: 1, priceUsd: 110 },
+];
+const CCTV_NVRS = [...CCTV_NVRS_IP, ...CCTV_NVRS_ANALOG];
+
 const CCTV_HDDS = [
   { brand: 'Seagate SkyHawk', model: '1TB Surveillance', capacityTb: 1, priceUsd: 48 },
   { brand: 'Seagate SkyHawk', model: '2TB Surveillance', capacityTb: 2, priceUsd: 65 },
@@ -199,6 +215,28 @@ const CCTV_POE_SWITCHES = [
   { brand: 'TP-Link', model: 'TL-SG1016PE 16-Port PoE', ports: 16, poeBudgetW: 150, priceUsd: 180 },
   { brand: 'Ubiquiti', model: 'USW-24-PoE 24-Port', ports: 24, poeBudgetW: 400, priceUsd: 420 },
 ];
+const CCTV_ACCESSORIES = [
+  { category: 'CABINET', brand: 'SmartTech', model: 'Wall-mount Network Cabinet', spec: '6U', priceUsd: 65 },
+  { category: 'CABINET', brand: 'SmartTech', model: 'Wall-mount Network Cabinet', spec: '9U', priceUsd: 85 },
+  { category: 'CABINET', brand: 'SmartTech', model: 'Floor-standing Network Cabinet', spec: '12U', priceUsd: 150 },
+  { category: 'CABINET', brand: 'SmartTech', model: 'Floor-standing Network Cabinet', spec: '22U', priceUsd: 260 },
+  { category: 'MONITOR', brand: 'Hikvision', model: 'LED Monitor', spec: '19"', priceUsd: 75 },
+  { category: 'MONITOR', brand: 'Hikvision', model: 'LED Monitor', spec: '24"', priceUsd: 110 },
+  { category: 'MONITOR', brand: 'Samsung', model: 'LED Monitor', spec: '32"', priceUsd: 180 },
+  { category: 'MONITOR', brand: 'Samsung', model: 'LED TV/Monitor', spec: '43"', priceUsd: 320 },
+  { category: 'MONITOR', brand: 'LG', model: 'LED TV/Monitor', spec: '55"', priceUsd: 480 },
+  { category: 'MONITOR', brand: 'LG', model: 'LED TV/Monitor', spec: '65"', priceUsd: 650 },
+  { category: 'MONITOR', brand: 'LG', model: 'LED Video Wall Display', spec: '75"', priceUsd: 950 },
+  { category: 'MONITOR', brand: 'LG', model: 'LED Video Wall Display', spec: '80"', priceUsd: 1150 },
+  { category: 'HDMI_CABLE', brand: 'SmartTech', model: 'HDMI Cable', spec: '3m', priceUsd: 6 },
+  { category: 'HDMI_CABLE', brand: 'SmartTech', model: 'HDMI Cable', spec: '5m', priceUsd: 9 },
+  { category: 'HDMI_CABLE', brand: 'SmartTech', model: 'HDMI Cable', spec: '10m', priceUsd: 16 },
+  { category: 'HDMI_SPLITTER', brand: 'SmartTech', model: 'HDMI Splitter', spec: '2-port', priceUsd: 18 },
+  { category: 'HDMI_SPLITTER', brand: 'SmartTech', model: 'HDMI Splitter', spec: '4-port', priceUsd: 32 },
+  { category: 'HDMI_SPLITTER', brand: 'SmartTech', model: 'HDMI Splitter', spec: '8-port', priceUsd: 58 },
+  { category: 'OTHER', brand: 'SmartTech', model: 'UPS Backup Unit', spec: '650VA', priceUsd: 55 },
+  { category: 'OTHER', brand: 'SmartTech', model: 'Surge Protector', spec: '4-way', priceUsd: 15 },
+];
 
 async function backfillCctvCatalog() {
   const tables = [
@@ -207,6 +245,7 @@ async function backfillCctvCatalog() {
     ['CctvHdd', CCTV_HDDS],
     ['CctvCable', CCTV_CABLES],
     ['CctvPoeSwitch', CCTV_POE_SWITCHES],
+    ['CctvAccessory', CCTV_ACCESSORIES],
   ];
   for (const [table, rows] of tables) {
     const existing = await db.execute(`SELECT COUNT(*) AS n FROM ${table}`);
@@ -214,6 +253,26 @@ async function backfillCctvCatalog() {
     for (const row of rows) await ins(table, { ...row, active: true });
   }
   console.log('CCTV equipment catalog seeded.');
+}
+
+// Migrates a CCTV catalog seeded before systemType/accessories existed: fixes
+// systemType on already-seeded analog DVR rows (they defaulted to 'IP' via
+// the ALTER TABLE column addition), and inserts any new analog camera/DVR
+// SKUs and accessories that a pre-existing, non-empty catalog is missing.
+// Matches by brand+model so it's safe to re-run on every boot.
+async function migrateCctvSystemTypesAndAccessories() {
+  await db.execute(`UPDATE CctvNvr SET systemType = 'ANALOG' WHERE poePorts = 0 AND systemType != 'ANALOG'`);
+
+  async function insertIfMissing(table, row) {
+    const existing = await db.execute({ sql: `SELECT id FROM ${table} WHERE brand = ? AND model = ?`, args: [row.brand, row.model] });
+    if (existing.rows.length > 0) return;
+    await ins(table, { ...row, active: true });
+  }
+
+  for (const row of CCTV_CAMERAS_ANALOG) await insertIfMissing('CctvCamera', row);
+  for (const row of CCTV_NVRS_ANALOG) await insertIfMissing('CctvNvr', row);
+  for (const row of CCTV_ACCESSORIES) await insertIfMissing('CctvAccessory', row);
+  console.log('CCTV system-type migration + accessories backfilled.');
 }
 
 // Replaces placeholder lesson content, quiz questions and assignment briefs
@@ -267,6 +326,7 @@ async function main() {
   await backfillSolarCatalog();
   await backfillFenceCatalog();
   await backfillCctvCatalog();
+  await migrateCctvSystemTypesAndAccessories();
 
   const existing = await db.execute('SELECT COUNT(*) AS n FROM User');
   if (Number(existing.rows[0].n) > 0) {

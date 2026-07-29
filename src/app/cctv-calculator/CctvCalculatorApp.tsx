@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import CameraPointBuilder from '@/components/cctv/CameraPointBuilder';
 import CctvConfigPanel from '@/components/cctv/CctvConfigPanel';
+import AccessoryPicker from '@/components/cctv/AccessoryPicker';
 import CctvResultsPanel from '@/components/cctv/CctvResultsPanel';
 import ScenarioCompare from '@/components/cctv/ScenarioCompare';
 import RequestQuoteModal from '@/components/cctv/RequestQuoteModal';
@@ -9,15 +10,16 @@ import AiAssistantWidget from '@/components/AiAssistantWidget';
 import { computeCctvDesign, defaultCctvConfig, defaultCameraPoints, DEFAULT_CCTV_CATALOG } from '@/lib/cctv/engine';
 import { buildCctvWhatsAppMessage } from '@/lib/cctv/whatsapp';
 import { whatsappLink } from '@/lib/contact';
-import type { CameraPoint, CctvScenario, CctvCatalog } from '@/lib/cctv/types';
+import type { CameraPoint, CctvScenario, CctvCatalog, SelectedAccessory } from '@/lib/cctv/types';
 
 const STORAGE_KEY = 'sta_cctv_scenarios_v1';
 
 const TABS = [
   { id: 'cameras', label: '1. Cameras' },
   { id: 'config', label: '2. Recording & network' },
-  { id: 'design', label: '3. Design' },
-  { id: 'compare', label: '4. Compare' },
+  { id: 'accessories', label: '3. Accessories' },
+  { id: 'design', label: '4. Design' },
+  { id: 'compare', label: '5. Compare' },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -171,8 +173,15 @@ export default function CctvCalculatorApp({
       </div>
 
       {tab === 'cameras' && <CameraPointBuilder points={points} onChange={setPoints} />}
-      {tab === 'config' && <CctvConfigPanel config={config} onChange={setConfig} />}
-      {tab === 'design' && <CctvResultsPanel design={design} />}
+      {tab === 'config' && <CctvConfigPanel config={config} catalog={catalog} onChange={setConfig} />}
+      {tab === 'accessories' && (
+        <AccessoryPicker
+          catalog={catalog.accessories}
+          selected={config.accessories}
+          onChange={(accessories: SelectedAccessory[]) => setConfig({ ...config, accessories })}
+        />
+      )}
+      {tab === 'design' && <CctvResultsPanel design={design} config={config} />}
       {tab === 'compare' && (
         <ScenarioCompare
           scenarios={scenarios}

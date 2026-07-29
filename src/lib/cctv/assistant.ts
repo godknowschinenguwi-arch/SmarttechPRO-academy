@@ -1,6 +1,8 @@
+import { ANY_BRAND } from './types';
 import type { CameraPoint, CctvConfig, CctvDesignResult } from './types';
 
 export function buildAssistantSystemPrompt(points: CameraPoint[], config: CctvConfig, design: CctvDesignResult): string {
+  const usePoe = config.systemType === 'IP';
   const cameraLines = points.length
     ? points.map((p) => `- ${p.name}: ${p.type.toLowerCase()}, ${p.environment.toLowerCase()}, ${p.resolutionMp}MP${p.lowLight ? ', low-light' : ''}`).join('\n')
     : '(no cameras added yet)';
@@ -8,12 +10,15 @@ export function buildAssistantSystemPrompt(points: CameraPoint[], config: CctvCo
   return `You are the SmartTech Security Assistant, embedded in SmartTech Academy's CCTV calculator. A user is designing a CCTV system in the tool right now and may ask you questions about it.
 
 Current design under discussion:
+- System type: ${config.systemType === 'IP' ? 'IP (network cameras over PoE, NVR)' : 'Analog (coax, DVR)'}
+- Brand: ${config.brand === ANY_BRAND ? 'no preference — cheapest suitable match per item' : `${config.brand} locked for cameras and the ${usePoe ? 'NVR' : 'DVR'} (the system does not mix camera/recorder brands)`}
 - Cameras: ${design.cameraCount} total
 - Bitrate: ${design.totalBitrateMbps.toFixed(1)} Mbps combined, ${config.compression}, ${config.frameRate}fps, ${config.recordingMode.toLowerCase()} recording${config.recordingMode === 'MOTION' ? ` (${config.motionActivityPct}% activity)` : ''}
-- Storage: ${design.totalStorageTb.toFixed(2)} TB for ${config.retentionDays} days retention (${design.hddCount} x ${design.hdd.capacityTb}TB HDD)
-- NVR: ${design.nvr.brand} ${design.nvr.model} (${design.nvr.channels}CH${config.usePoe ? `, ${design.nvr.poePorts} PoE ports` : ''})
-- Power: ${config.usePoe ? `PoE, ${design.totalPoeW.toFixed(0)}W total budget${design.poeSwitch ? `, ${design.poeSwitch.brand} ${design.poeSwitch.model} switch` : ''}` : 'separate power supplies (no PoE)'}
+- Storage: ${design.totalStorageTb.toFixed(2)} TB for ${config.retentionDays} days retention (${design.hddCount} x ${design.hdd.capacityTb}TB HDD, minimum drive size is 1TB)
+- NVR/DVR: ${design.nvr.brand} ${design.nvr.model} (${design.nvr.channels}CH${usePoe ? `, ${design.nvr.poePorts} PoE ports` : ''})
+- Power: ${usePoe ? `PoE, ${design.totalPoeW.toFixed(0)}W total budget${design.poeSwitch ? `, ${design.poeSwitch.brand} ${design.poeSwitch.model} switch` : ''}` : 'separate power supplies (no PoE)'}
 - Cabling: ${design.cable.type === 'CAT6' ? 'CAT6' : 'coax + power'}, ${design.totalCableLengthM.toFixed(0)}m total, ${design.cableSpoolsNeeded} spool(s)
+- Accessories selected: ${config.accessories.length ? `${config.accessories.length} item type(s) (cabinets, monitors, HDMI cable/splitters etc. — see the Accessories tab for the exact list)` : 'none yet'}
 - Estimated total system cost: $${design.totalUsd.toLocaleString()}
 - Cameras:
 ${cameraLines}

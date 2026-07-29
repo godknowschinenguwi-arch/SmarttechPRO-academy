@@ -612,6 +612,7 @@ model CctvCamera {
   id           String   @id @default(cuid())
   brand        String
   model        String
+  systemType   String   @default("IP") // 'IP' | 'ANALOG'
   type         String
   environment  String
   resolutionMp Float
@@ -626,6 +627,7 @@ model CctvNvr {
   id           String   @id @default(cuid())
   brand        String
   model        String
+  systemType   String   @default("IP") // 'IP' | 'ANALOG'
   channels     Float
   poePorts     Float
   poeBudgetW   Float
@@ -665,6 +667,17 @@ model CctvPoeSwitch {
   priceUsd    Float
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
+}
+
+model CctvAccessory {
+  id        String   @id @default(cuid())
+  category  String // 'CABINET' | 'MONITOR' | 'HDMI_CABLE' | 'HDMI_SPLITTER' | 'OTHER'
+  brand     String
+  model     String
+  spec      String
+  priceUsd  Float
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
 }
 
 model CctvDesign {

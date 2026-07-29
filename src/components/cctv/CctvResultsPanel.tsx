@@ -1,6 +1,7 @@
 'use client';
 import { Price } from '@/components/CurrencyProvider';
-import type { CctvDesignResult } from '@/lib/cctv/types';
+import { ANY_BRAND } from '@/lib/cctv/types';
+import type { CctvDesignResult, CctvConfig } from '@/lib/cctv/types';
 
 const WARN_STYLE: Record<string, string> = {
   info: 'bg-brand-50 text-brand-700 border-brand-200',
@@ -8,13 +9,14 @@ const WARN_STYLE: Record<string, string> = {
   critical: 'bg-rose-50 text-rose-700 border-rose-200',
 };
 
-export default function CctvResultsPanel({ design }: { design: CctvDesignResult }) {
+export default function CctvResultsPanel({ design, config }: { design: CctvDesignResult; config: CctvConfig }) {
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <SummaryStat label="System" value={config.systemType === 'IP' ? 'IP' : 'Analog'} sub={config.brand === ANY_BRAND ? 'Any brand' : config.brand} />
         <SummaryStat label="Cameras" value={String(design.cameraCount)} sub={`${design.totalBitrateMbps.toFixed(0)} Mbps total`} />
         <SummaryStat label="Storage" value={`${design.totalStorageTb.toFixed(1)} TB`} sub={`${design.hddCount} × ${design.hdd.model}`} />
-        <SummaryStat label="NVR" value={`${design.nvr.channels}CH`} sub={design.nvr.model} />
+        <SummaryStat label={config.systemType === 'IP' ? 'NVR' : 'DVR'} value={`${design.nvr.channels}CH`} sub={design.nvr.model} />
         <SummaryStat label="System cost" value={<Price cents={design.totalUsd * 100} />} sub="incl. install buffer" />
       </div>
 
