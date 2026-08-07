@@ -27,7 +27,7 @@ interface MyLead {
   createdAt: string;
 }
 
-const SOURCE_LABEL: Record<string, string> = { SOLAR: '⚡ Solar', FENCE: '🔌 Fence', CCTV: '📹 CCTV' };
+const SOURCE_LABEL: Record<string, string> = { SOLAR: '⚡ Solar', FENCE: '🔌 Fence', CCTV: '📹 CCTV', WIRING: '🔧 Wiring' };
 const STATUSES = ['CLAIMED', 'CONTACTED', 'CONVERTED', 'CLOSED'];
 const STATUS_STYLE: Record<string, string> = {
   CLAIMED: 'bg-brand-50 text-brand-700 border-brand-200',

@@ -33,6 +33,7 @@ export default function Navbar({ user }: { user: NavUser }) {
           <Link href="/solar-calculator" className="hover:text-brand-700">Solar Calculator</Link>
           <Link href="/electric-fence-calculator" className="hover:text-brand-700">Fence Calculator</Link>
           <Link href="/cctv-calculator" className="hover:text-brand-700">CCTV Calculator</Link>
+          <Link href="/wiring-calculator" className="hover:text-brand-700">Wiring Calculator</Link>
           <Link href="/practicals" className="hover:text-brand-700">Practical Training</Link>
           <Link href="/verify" className="hover:text-brand-700">Verify Certificate</Link>
           <Link href="/leaderboard" className="hover:text-brand-700">Leaderboard</Link>
@@ -68,6 +69,7 @@ export default function Navbar({ user }: { user: NavUser }) {
             <Link href="/solar-calculator" onClick={() => setOpen(false)}>Solar Calculator</Link>
             <Link href="/electric-fence-calculator" onClick={() => setOpen(false)}>Fence Calculator</Link>
             <Link href="/cctv-calculator" onClick={() => setOpen(false)}>CCTV Calculator</Link>
+            <Link href="/wiring-calculator" onClick={() => setOpen(false)}>Wiring Calculator</Link>
             <Link href="/practicals" onClick={() => setOpen(false)}>Practical Training</Link>
             <Link href="/verify" onClick={() => setOpen(false)}>Verify Certificate</Link>
             <Link href="/leaderboard" onClick={() => setOpen(false)}>Leaderboard</Link>
