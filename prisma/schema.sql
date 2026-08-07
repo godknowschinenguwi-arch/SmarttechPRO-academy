@@ -370,6 +370,42 @@ CREATE TABLE IF NOT EXISTS CctvDesign (
   updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- House wiring equipment catalog — admin-editable via /admin/wiring-catalog.
+CREATE TABLE IF NOT EXISTS WiringCable (
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, csaMm2 REAL NOT NULL,
+  maxCurrentA REAL NOT NULL, spoolLengthM REAL NOT NULL, priceUsdPerSpool REAL NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS WiringConduit (
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, diameterMm REAL NOT NULL,
+  lengthM REAL NOT NULL, priceUsdPerLength REAL NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS WiringBoard (
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, ways REAL NOT NULL,
+  priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS WiringBreaker (
+  id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, type TEXT NOT NULL, ampRating REAL NOT NULL,
+  priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS WiringAccessory (
+  id TEXT PRIMARY KEY, category TEXT NOT NULL, brand TEXT NOT NULL, model TEXT NOT NULL, spec TEXT NOT NULL,
+  priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Cloud-saved house wiring designs, tied to a signed-in account.
+CREATE TABLE IF NOT EXISTS WiringDesign (
+  id TEXT PRIMARY KEY, userId TEXT NOT NULL REFERENCES User(id),
+  name TEXT NOT NULL, circuits TEXT NOT NULL, config TEXT NOT NULL,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_course_category ON Course(categoryId);
 CREATE INDEX IF NOT EXISTS idx_lesson_module ON Lesson(moduleId);
 CREATE INDEX IF NOT EXISTS idx_enrollment_user ON Enrollment(userId);
@@ -383,3 +419,4 @@ CREATE INDEX IF NOT EXISTS idx_orgmember_org ON OrganizationMember(organizationI
 CREATE INDEX IF NOT EXISTS idx_orgmember_user ON OrganizationMember(userId);
 CREATE INDEX IF NOT EXISTS idx_fencedesign_user ON FenceDesign(userId);
 CREATE INDEX IF NOT EXISTS idx_cctvdesign_user ON CctvDesign(userId);
+CREATE INDEX IF NOT EXISTS idx_wiringdesign_user ON WiringDesign(userId);

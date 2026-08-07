@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import WiringCalculatorApp from './WiringCalculatorApp';
+import { getActiveWiringCatalog } from '@/lib/wiring/loadCatalog';
+import { currentUser } from '@/lib/auth';
 
 export const metadata: Metadata = {
   title: 'House Wiring & Conduit Calculator — SmartTech Academy',
@@ -7,7 +9,9 @@ export const metadata: Metadata = {
     'Pro-grade house wiring estimator: build a circuit schedule, size cable, breakers, the distribution board and conduit/tubing, and export a branded proposal — for installers and technicians.',
 };
 
-export default function WiringCalculatorPage() {
+export default async function WiringCalculatorPage() {
+  const [catalog, user] = await Promise.all([getActiveWiringCatalog(), currentUser()]);
+
   return (
     <div className="bg-surface-soft pb-16">
       <div className="bg-gradient-to-br from-brand-800 via-brand-700 to-brand-900 py-12 text-white">
@@ -21,7 +25,7 @@ export default function WiringCalculatorPage() {
         </div>
       </div>
       <div className="container-x -mt-6 flex flex-col gap-6">
-        <WiringCalculatorApp />
+        <WiringCalculatorApp catalog={catalog} signedIn={!!user} />
       </div>
     </div>
   );

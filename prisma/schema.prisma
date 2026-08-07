@@ -52,6 +52,7 @@ model User {
   orgMemberships   OrganizationMember[] @relation("OrgMembership")
   fenceDesigns     FenceDesign[]        @relation("FenceDesignOwner")
   cctvDesigns      CctvDesign[]         @relation("CctvDesignOwner")
+  wiringDesigns    WiringDesign[]       @relation("WiringDesignOwner")
 }
 
 // ---------- Catalog ----------
@@ -702,6 +703,72 @@ model CctvDesign {
   name      String
   points    String // JSON-encoded CameraPoint[]
   config    String // JSON-encoded CctvConfig
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WiringCable {
+  id               String   @id @default(cuid())
+  brand            String
+  model            String
+  csaMm2           Float
+  maxCurrentA      Float
+  spoolLengthM     Float
+  priceUsdPerSpool Float
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+}
+
+model WiringConduit {
+  id                String   @id @default(cuid())
+  brand             String
+  model             String
+  diameterMm        Float
+  lengthM           Float
+  priceUsdPerLength Float
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+}
+
+model WiringBoard {
+  id        String   @id @default(cuid())
+  brand     String
+  model     String
+  ways      Float
+  priceUsd  Float
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model WiringBreaker {
+  id        String   @id @default(cuid())
+  brand     String
+  model     String
+  type      String // 'MCB' | 'RCD' | 'ISOLATOR'
+  ampRating Float
+  priceUsd  Float
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model WiringAccessory {
+  id        String   @id @default(cuid())
+  category  String // 'SWITCH' | 'SOCKET_OUTLET' | 'LIGHT_FITTING' | 'JUNCTION_BOX' | 'OTHER'
+  brand     String
+  model     String
+  spec      String
+  priceUsd  Float
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model WiringDesign {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("WiringDesignOwner", fields: [userId], references: [id])
+  name      String
+  circuits  String // JSON-encoded WiringCircuit[]
+  config    String // JSON-encoded WiringConfig
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

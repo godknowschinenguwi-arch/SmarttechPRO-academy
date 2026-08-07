@@ -97,6 +97,12 @@ export default async function AdminPage() {
             📹 CCTV equipment catalog — cameras, NVR/DVR, storage, cable →
           </Link>
           <Link
+            href="/admin/wiring-catalog"
+            className="inline-flex items-center gap-2 rounded-xl border border-surface-line bg-surface-soft px-4 py-3 text-sm font-semibold text-ink-soft transition hover:border-brand-300 hover:text-brand-700"
+          >
+            🔧 Wiring equipment catalog — cable, conduit, boards, breakers →
+          </Link>
+          <Link
             href="/admin/leads"
             className="inline-flex items-center gap-2 rounded-xl border border-surface-line bg-surface-soft px-4 py-3 text-sm font-semibold text-ink-soft transition hover:border-brand-300 hover:text-brand-700"
           >

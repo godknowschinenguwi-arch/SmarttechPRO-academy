@@ -92,6 +92,14 @@ export interface WiringWarning {
   message: string;
 }
 
+export interface WiringScenario {
+  id: string;
+  name: string;
+  createdAt: string;
+  circuits: WiringCircuit[];
+  config: WiringConfig;
+}
+
 export interface CircuitDesignLine {
   circuit: WiringCircuit;
   cable: CatalogCable;

@@ -321,6 +321,68 @@ async function migrateCctvSystemTypesAndAccessories() {
   console.log('CCTV system-type migration + accessories backfilled.');
 }
 
+// House Wiring Calculator equipment catalog — same seed-once-if-empty pattern.
+const WIRING_CABLES = [
+  { brand: 'SmartTech', model: '1.5mm² Twin & Earth PVC', csaMm2: 1.5, maxCurrentA: 17.5, spoolLengthM: 100, priceUsdPerSpool: 45 },
+  { brand: 'SmartTech', model: '2.5mm² Twin & Earth PVC', csaMm2: 2.5, maxCurrentA: 24, spoolLengthM: 100, priceUsdPerSpool: 68 },
+  { brand: 'SmartTech', model: '4mm² Twin & Earth PVC', csaMm2: 4, maxCurrentA: 32, spoolLengthM: 100, priceUsdPerSpool: 105 },
+  { brand: 'SmartTech', model: '6mm² Twin & Earth PVC', csaMm2: 6, maxCurrentA: 41, spoolLengthM: 50, priceUsdPerSpool: 95 },
+  { brand: 'SmartTech', model: '10mm² Twin & Earth PVC', csaMm2: 10, maxCurrentA: 57, spoolLengthM: 50, priceUsdPerSpool: 155 },
+];
+const WIRING_CONDUITS = [
+  { brand: 'SmartTech', model: '20mm PVC Conduit', diameterMm: 20, lengthM: 3, priceUsdPerLength: 2.2 },
+  { brand: 'SmartTech', model: '25mm PVC Conduit', diameterMm: 25, lengthM: 3, priceUsdPerLength: 2.8 },
+  { brand: 'SmartTech', model: '32mm PVC Conduit', diameterMm: 32, lengthM: 3, priceUsdPerLength: 3.6 },
+];
+const WIRING_BOARDS = [
+  { brand: 'CBI', model: '4-Way Distribution Board', ways: 4, priceUsd: 28 },
+  { brand: 'CBI', model: '6-Way Distribution Board', ways: 6, priceUsd: 38 },
+  { brand: 'CBI', model: '8-Way Distribution Board', ways: 8, priceUsd: 48 },
+  { brand: 'CBI', model: '12-Way Distribution Board', ways: 12, priceUsd: 68 },
+  { brand: 'CBI', model: '18-Way Distribution Board', ways: 18, priceUsd: 95 },
+  { brand: 'CBI', model: '24-Way Distribution Board', ways: 24, priceUsd: 130 },
+];
+const WIRING_BREAKERS = [
+  { brand: 'CBI', model: 'MCB 10A', type: 'MCB', ampRating: 10, priceUsd: 6.5 },
+  { brand: 'CBI', model: 'MCB 16A', type: 'MCB', ampRating: 16, priceUsd: 6.5 },
+  { brand: 'CBI', model: 'MCB 20A', type: 'MCB', ampRating: 20, priceUsd: 7 },
+  { brand: 'CBI', model: 'MCB 25A', type: 'MCB', ampRating: 25, priceUsd: 7.5 },
+  { brand: 'CBI', model: 'MCB 32A', type: 'MCB', ampRating: 32, priceUsd: 8.5 },
+  { brand: 'CBI', model: 'MCB 40A', type: 'MCB', ampRating: 40, priceUsd: 10 },
+  { brand: 'CBI', model: 'MCB 63A', type: 'MCB', ampRating: 63, priceUsd: 14 },
+  { brand: 'CBI', model: 'RCD Earth Leakage Unit 63A/30mA', type: 'RCD', ampRating: 63, priceUsd: 32 },
+  { brand: 'CBI', model: 'Main Isolator 63A', type: 'ISOLATOR', ampRating: 63, priceUsd: 18 },
+];
+const WIRING_ACCESSORIES = [
+  { category: 'SWITCH', brand: 'SmartTech', model: 'Light Switch', spec: '1-lever', priceUsd: 3.2 },
+  { category: 'SWITCH', brand: 'SmartTech', model: 'Light Switch', spec: '2-lever', priceUsd: 4.8 },
+  { category: 'SWITCH', brand: 'SmartTech', model: 'Light Switch', spec: '3-lever', priceUsd: 6.5 },
+  { category: 'SOCKET_OUTLET', brand: 'SmartTech', model: 'Socket Outlet', spec: 'Single, RSA 3-pin', priceUsd: 3.8 },
+  { category: 'SOCKET_OUTLET', brand: 'SmartTech', model: 'Socket Outlet', spec: 'Double, RSA 3-pin', priceUsd: 5.5 },
+  { category: 'LIGHT_FITTING', brand: 'SmartTech', model: 'Batten Holder', spec: 'Indoor, ceiling-mount', priceUsd: 2.5 },
+  { category: 'LIGHT_FITTING', brand: 'SmartTech', model: 'Bulkhead Fitting', spec: 'Outdoor, weatherproof', priceUsd: 8.5 },
+  { category: 'JUNCTION_BOX', brand: 'SmartTech', model: 'Junction Box', spec: 'Standard PVC', priceUsd: 1.2 },
+  { category: 'OTHER', brand: 'SmartTech', model: 'Conduit Saddles', spec: 'Pack of 20', priceUsd: 3.5 },
+  { category: 'OTHER', brand: 'SmartTech', model: 'Connector Strip', spec: '12-way', priceUsd: 1.8 },
+  { category: 'OTHER', brand: 'CBI', model: 'Surge Protection Device (SPD)', spec: 'Type 2, DIN rail', priceUsd: 45 },
+];
+
+async function backfillWiringCatalog() {
+  const tables = [
+    ['WiringCable', WIRING_CABLES],
+    ['WiringConduit', WIRING_CONDUITS],
+    ['WiringBoard', WIRING_BOARDS],
+    ['WiringBreaker', WIRING_BREAKERS],
+    ['WiringAccessory', WIRING_ACCESSORIES],
+  ];
+  for (const [table, rows] of tables) {
+    const existing = await db.execute(`SELECT COUNT(*) AS n FROM ${table}`);
+    if (Number(existing.rows[0].n) > 0) continue;
+    for (const row of rows) await ins(table, { ...row, active: true });
+  }
+  console.log('House wiring equipment catalog seeded.');
+}
+
 // Replaces placeholder lesson content, quiz questions and assignment briefs
 // with the real material from the companion book (see prisma/content.mjs).
 // Runs unconditionally — like backfillCovers() above — so it safely updates
@@ -374,6 +436,7 @@ async function main() {
   await migrateFenceCatalog();
   await backfillCctvCatalog();
   await migrateCctvSystemTypesAndAccessories();
+  await backfillWiringCatalog();
 
   const existing = await db.execute('SELECT COUNT(*) AS n FROM User');
   if (Number(existing.rows[0].n) > 0) {

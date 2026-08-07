@@ -2,17 +2,19 @@
 import { useState } from 'react';
 import { whatsappLink } from '@/lib/contact';
 import { buildWiringWhatsAppMessage } from '@/lib/wiring/whatsapp';
-import type { WiringDesignResult, WiringCircuit, WiringConfig } from '@/lib/wiring/types';
+import type { WiringDesignResult, WiringCircuit, WiringConfig, WiringCatalog } from '@/lib/wiring/types';
 
 export default function RequestQuoteModal({
   circuits,
   config,
   design,
+  catalog,
   onClose,
 }: {
   circuits: WiringCircuit[];
   config: WiringConfig;
   design: WiringDesignResult;
+  catalog: WiringCatalog;
   onClose: () => void;
 }) {
   const [form, setForm] = useState({ name: config.clientName || '', phone: '', email: '', city: '', message: '' });
@@ -37,7 +39,7 @@ export default function RequestQuoteModal({
     const res = await fetch('/api/wiring/leads', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, circuits, config }),
+      body: JSON.stringify({ ...form, circuits, config, catalog }),
     });
     return res.ok;
   }

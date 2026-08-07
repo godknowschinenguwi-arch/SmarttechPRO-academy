@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { clientIp, rateLimit } from '@/lib/rateLimit';
 import { createLead } from '@/lib/leads';
 import { computeWiringDesign } from '@/lib/wiring/engine';
-import { sanitizeCircuits, sanitizeWiringConfig } from '@/lib/wiring/sanitize';
+import { sanitizeCircuits, sanitizeWiringConfig, sanitizeWiringCatalog } from '@/lib/wiring/sanitize';
 
 function str(v: unknown, maxLen: number): string {
   return typeof v === 'string' ? v.trim().slice(0, maxLen) : '';
@@ -29,7 +29,8 @@ export async function POST(req: NextRequest) {
 
   const circuits = sanitizeCircuits(body.circuits);
   const config = sanitizeWiringConfig(body.config);
-  const design = computeWiringDesign(circuits, config);
+  const catalog = sanitizeWiringCatalog(body.catalog);
+  const design = computeWiringDesign(circuits, config, catalog);
 
   const summary = `Wiring · ${design.circuitCount} circuits · ${design.board.ways}-way DB`;
   const id = await createLead({

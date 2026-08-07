@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { clientIp, rateLimit } from '@/lib/rateLimit';
 import { computeWiringDesign } from '@/lib/wiring/engine';
 import { generateWiringProposalPdf } from '@/lib/wiring/pdf';
-import { sanitizeCircuits, sanitizeWiringConfig } from '@/lib/wiring/sanitize';
+import { sanitizeCircuits, sanitizeWiringConfig, sanitizeWiringCatalog } from '@/lib/wiring/sanitize';
 
 export async function POST(req: NextRequest) {
   const limited = rateLimit(`wiring-pdf:${clientIp(req)}`, 20, 60 * 60_000);
@@ -15,7 +15,8 @@ export async function POST(req: NextRequest) {
 
   const circuits = sanitizeCircuits(body.circuits);
   const config = sanitizeWiringConfig(body.config);
-  const design = computeWiringDesign(circuits, config);
+  const catalog = sanitizeWiringCatalog(body.catalog);
+  const design = computeWiringDesign(circuits, config, catalog);
 
   const appUrl = new URL(req.url).origin;
   const pdfBytes = await generateWiringProposalPdf({ design, config, appUrl });
