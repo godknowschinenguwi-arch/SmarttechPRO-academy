@@ -1,9 +1,9 @@
-// Shared "request a quote" lead capture used by all three calculators
-// (Solar, Electric Fence, CCTV). Feeds the admin review panel and the
-// installer marketplace.
+// Shared "request a quote" lead capture used by all four calculators
+// (Solar, Electric Fence, CCTV, Wiring). Feeds the admin review panel and
+// the installer marketplace.
 import { insert } from './db';
 
-export type LeadSource = 'SOLAR' | 'FENCE' | 'CCTV';
+export type LeadSource = 'SOLAR' | 'FENCE' | 'CCTV' | 'WIRING';
 
 export interface CreateLeadInput {
   source: LeadSource;
