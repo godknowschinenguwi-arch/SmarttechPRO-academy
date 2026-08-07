@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { CurrencyProvider } from '@/components/CurrencyProvider';
 import { currentUser } from '@/lib/auth';
+import { getUnreadCounts } from '@/lib/queries';
 
 export const metadata: Metadata = {
   title: 'SmartTech Academy — Building Africa’s Next Generation of Skilled Technicians',
@@ -15,11 +16,15 @@ export const dynamic = 'force-dynamic';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser();
+  const counts = user ? await getUnreadCounts(user.id) : null;
   return (
     <html lang="en">
       <body className="flex min-h-screen flex-col">
         <CurrencyProvider>
-          <Navbar user={user ? { name: user.name, role: user.role } : null} />
+          <Navbar
+            user={user ? { name: user.name, role: user.role } : null}
+            counts={counts ? { notifications: Number(counts.notifications), messages: Number(counts.messages) } : { notifications: 0, messages: 0 }}
+          />
           <main className="flex-1">{children}</main>
           <Footer />
         </CurrencyProvider>

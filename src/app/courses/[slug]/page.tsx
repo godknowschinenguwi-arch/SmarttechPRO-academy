@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import Stars from '@/components/Stars';
 import EnrollButton from '@/components/EnrollButton';
 import BookSessionButton from '@/components/BookSessionButton';
@@ -132,6 +133,9 @@ export default async function CoursePage({ params }: { params: { slug: string } 
                 <p className="font-display font-bold">{course.instructorName}</p>
                 <p className="text-sm text-ink-faint">{course.instructorHeadline}</p>
                 <p className="mt-3 text-sm leading-7 text-ink-soft">{course.instructorBio}</p>
+                {enrollment && user && user.id !== course.instructorId && (
+                  <Link href={`/messages/${course.instructorId}`} className="btn-ghost mt-4 !px-4 !py-2 text-xs">💬 Message instructor</Link>
+                )}
               </div>
             </div>
           </section>

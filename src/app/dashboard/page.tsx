@@ -160,8 +160,12 @@ export default async function DashboardPage() {
           </div>
 
           <div className="card p-6">
-            <h3 className="font-display font-bold">🔔 Announcements</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-display font-bold">🔔 Announcements</h3>
+              <Link href="/notifications" className="text-xs font-bold text-brand-600 hover:text-brand-800">View all →</Link>
+            </div>
             <div className="mt-4 space-y-3">
+              {notifications.length === 0 && <p className="text-sm text-ink-faint">Nothing new right now.</p>}
               {notifications.map((n: any) => (
                 <div key={n.id} className="rounded-xl bg-surface-soft p-3 text-sm">
                   <p className="font-bold">{n.title}</p>

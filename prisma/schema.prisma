@@ -353,7 +353,7 @@ model Notification {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id])
-  kind      String // COURSE_UPDATE | ASSIGNMENT_DUE | QUIZ_RESULT | CERT_READY | PRACTICAL_REMINDER | PAYMENT
+  kind      String // COURSE_UPDATE | ASSIGNMENT_DUE | QUIZ_RESULT | CERT_READY | PRACTICAL_REMINDER | PAYMENT | MESSAGE
   title     String
   body      String
   href      String?

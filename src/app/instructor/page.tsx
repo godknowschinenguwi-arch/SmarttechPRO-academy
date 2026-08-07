@@ -90,7 +90,10 @@ export default async function InstructorPage() {
                   <p className="font-bold">{s.assignmentTitle}</p>
                   <p className="text-xs text-ink-faint">{s.studentName} · {s.courseTitle}</p>
                 </div>
-                <button className="btn-ghost !px-4 !py-2 text-xs">Grade</button>
+                <div className="flex shrink-0 gap-2">
+                  <Link href={`/messages/${s.studentId}`} className="btn-ghost !px-4 !py-2 text-xs">Message</Link>
+                  <button className="btn-ghost !px-4 !py-2 text-xs">Grade</button>
+                </div>
               </div>
             ))}
           </div>

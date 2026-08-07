@@ -111,7 +111,7 @@ export async function getInstructorDashboard(userId: string) {
        (SELECT COUNT(*) FROM Enrollment e WHERE e.courseId = c.id AND e.status = 'COMPLETED') AS completed
      FROM Course c WHERE c.instructorId = ? ORDER BY students DESC`, [userId]);
   const toGrade = await all<any>(
-    `SELECT s.id, s.createdAt, a.title AS assignmentTitle, u.name AS studentName, c.title AS courseTitle
+    `SELECT s.id, s.createdAt, a.title AS assignmentTitle, u.id AS studentId, u.name AS studentName, c.title AS courseTitle
      FROM Submission s JOIN Assignment a ON a.id = s.assignmentId JOIN Lesson l ON l.id = a.lessonId
      JOIN Module m ON m.id = l.moduleId JOIN Course c ON c.id = m.courseId JOIN User u ON u.id = s.userId
      WHERE c.instructorId = ? AND s.grade IS NULL ORDER BY s.createdAt`, [userId]);
@@ -141,6 +141,76 @@ export function getCertificate(serial: string) {
     `SELECT cert.*, u.name AS studentName, c.title AS courseTitle, i.name AS instructorName
      FROM Certificate cert JOIN User u ON u.id = cert.userId JOIN Course c ON c.id = cert.courseId
      JOIN User i ON i.id = c.instructorId WHERE cert.serial = ?`, [serial]);
+}
+
+// ---- Notifications ----
+
+export function getUnreadCounts(userId: string) {
+  return get<{ notifications: number; messages: number }>(
+    `SELECT
+       (SELECT COUNT(*) FROM Notification WHERE userId = ? AND readAt IS NULL) AS notifications,
+       (SELECT COUNT(*) FROM Message WHERE recipientId = ? AND readAt IS NULL) AS messages`,
+    [userId, userId]);
+}
+
+export function listNotifications(userId: string) {
+  return all<any>(`SELECT * FROM Notification WHERE userId = ? ORDER BY createdAt DESC LIMIT 100`, [userId]);
+}
+
+// ---- Messages ----
+
+export function listContacts(userId: string, role: string) {
+  if (role === 'INSTRUCTOR') {
+    return all<any>(
+      `SELECT DISTINCT u.id, u.name, u.avatarUrl, u.role FROM Enrollment e
+       JOIN Course c ON c.id = e.courseId JOIN User u ON u.id = e.userId
+       WHERE c.instructorId = ? ORDER BY u.name`, [userId]);
+  }
+  if (role === 'STUDENT') {
+    return all<any>(
+      `SELECT DISTINCT u.id, u.name, u.avatarUrl, u.role FROM Enrollment e
+       JOIN Course c ON c.id = e.courseId JOIN User u ON u.id = c.instructorId
+       WHERE e.userId = ? ORDER BY u.name`, [userId]);
+  }
+  return all<any>(`SELECT id, name, avatarUrl, role FROM User WHERE id != ? ORDER BY name`, [userId]);
+}
+
+// Anyone you share a course with (as student/instructor), already have message
+// history with, or who is an admin (support). Keeps messaging to real
+// relationships instead of an open directory.
+export async function getMessageableUserIds(userId: string, role: string): Promise<Set<string>> {
+  if (role === 'ADMIN') {
+    const rows = await all<{ id: string }>(`SELECT id FROM User WHERE id != ?`, [userId]);
+    return new Set(rows.map((r) => r.id));
+  }
+  const [contacts, convos, admins] = await Promise.all([
+    listContacts(userId, role),
+    all<{ otherId: string }>(
+      `SELECT DISTINCT CASE WHEN senderId = ? THEN recipientId ELSE senderId END AS otherId
+       FROM Message WHERE senderId = ? OR recipientId = ?`, [userId, userId, userId]),
+    all<{ id: string }>(`SELECT id FROM User WHERE role = 'ADMIN'`),
+  ]);
+  return new Set([...contacts.map((c: any) => c.id), ...convos.map((c) => c.otherId), ...admins.map((a) => a.id)]);
+}
+
+export function listConversations(userId: string) {
+  return all<any>(
+    `SELECT other.id AS userId, other.name, other.avatarUrl, other.role,
+       (SELECT body FROM Message m2 WHERE (m2.senderId = other.id AND m2.recipientId = ?) OR (m2.senderId = ? AND m2.recipientId = other.id)
+        ORDER BY m2.createdAt DESC, m2.id DESC LIMIT 1) AS lastBody,
+       (SELECT createdAt FROM Message m2 WHERE (m2.senderId = other.id AND m2.recipientId = ?) OR (m2.senderId = ? AND m2.recipientId = other.id)
+        ORDER BY m2.createdAt DESC, m2.id DESC LIMIT 1) AS lastAt,
+       (SELECT COUNT(*) FROM Message m3 WHERE m3.senderId = other.id AND m3.recipientId = ? AND m3.readAt IS NULL) AS unread
+     FROM User other
+     WHERE other.id IN (SELECT senderId FROM Message WHERE recipientId = ? UNION SELECT recipientId FROM Message WHERE senderId = ?)
+     ORDER BY lastAt DESC`,
+    [userId, userId, userId, userId, userId, userId, userId]);
+}
+
+export function getConversation(userId: string, otherId: string) {
+  return all<any>(
+    `SELECT * FROM Message WHERE (senderId = ? AND recipientId = ?) OR (senderId = ? AND recipientId = ?) ORDER BY createdAt ASC`,
+    [userId, otherId, otherId, userId]);
 }
 
 // ---- CCTV course design progress ----

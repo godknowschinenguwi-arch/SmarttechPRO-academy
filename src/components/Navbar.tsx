@@ -5,8 +5,18 @@ import { useRouter } from 'next/navigation';
 import { CurrencySwitcher } from './CurrencyProvider';
 
 type NavUser = { name: string; role: string } | null;
+type Counts = { notifications: number; messages: number };
 
-export default function Navbar({ user }: { user: NavUser }) {
+function Badge({ n }: { n: number }) {
+  if (n <= 0) return null;
+  return (
+    <span className="absolute -right-1.5 -top-1.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-accent-500 px-1 text-[10px] font-bold text-white">
+      {n > 9 ? '9+' : n}
+    </span>
+  );
+}
+
+export default function Navbar({ user, counts }: { user: NavUser; counts?: Counts }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
@@ -38,6 +48,19 @@ export default function Navbar({ user }: { user: NavUser }) {
           <CurrencySwitcher />
           {user ? (
             <>
+              <Link href="/messages" aria-label="Messages" className="relative rounded-lg p-2 text-ink-soft hover:bg-surface-soft hover:text-brand-700">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                <Badge n={counts?.messages ?? 0} />
+              </Link>
+              <Link href="/notifications" aria-label="Notifications" className="relative rounded-lg p-2 text-ink-soft hover:bg-surface-soft hover:text-brand-700">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                <Badge n={counts?.notifications ?? 0} />
+              </Link>
               <Link href={dashHref} className="btn-primary !px-4 !py-2">My Dashboard</Link>
               <button onClick={logout} className="text-sm font-semibold text-ink-faint hover:text-ink">Log out</button>
             </>
@@ -65,6 +88,12 @@ export default function Navbar({ user }: { user: NavUser }) {
             <div className="pt-2"><CurrencySwitcher /></div>
             {user ? (
               <>
+                <Link href="/messages" onClick={() => setOpen(false)}>
+                  Messages{(counts?.messages ?? 0) > 0 && <span className="ml-2 chip bg-accent-500 text-white">{counts!.messages}</span>}
+                </Link>
+                <Link href="/notifications" onClick={() => setOpen(false)}>
+                  Notifications{(counts?.notifications ?? 0) > 0 && <span className="ml-2 chip bg-accent-500 text-white">{counts!.notifications}</span>}
+                </Link>
                 <Link href={dashHref} className="btn-primary" onClick={() => setOpen(false)}>My Dashboard</Link>
                 <button onClick={logout} className="text-left text-ink-faint">Log out</button>
               </>
