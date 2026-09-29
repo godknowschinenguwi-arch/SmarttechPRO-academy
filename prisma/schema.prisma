@@ -426,6 +426,11 @@ model SolarPanel {
   imp       Float
   voc       Float
   isc       Float
+  // Design Rules v1.0 — industry-typical placeholders, confirm against datasheet per model.
+  areaM2                Float @default(2.3)
+  tempCoeffPmaxPctPerC  Float @default(-0.35)
+  tempCoeffVocPctPerC   Float @default(-0.28)
+  tempCoeffIscPctPerC   Float @default(0.05)
   priceUsd  Float
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -441,6 +446,9 @@ model SolarBattery {
   maxDodPct     Float
   roundTripEff  Float
   cycleLife     Int
+  // Design Rules v1.0 — industry-typical placeholders, confirm against datasheet/BMS spec per model.
+  maxChargeCurrentA     Float @default(20)
+  maxDischargeCurrentA  Float @default(20)
   priceUsd      Float
   active        Boolean  @default(true)
   createdAt     DateTime @default(now())
@@ -456,6 +464,13 @@ model SolarInverter {
   voltageOptions  String // JSON-encoded number[]
   mpptBuiltIn     Boolean  @default(false)
   efficiencyPct   Float
+  // Design Rules v1.0 — industry-typical placeholders, confirm against datasheet per exact model/firmware.
+  // Only meaningful when mpptBuiltIn; 0 means PV is fed through a separate charge controller instead.
+  maxDcInputVoltage        Float @default(0)
+  mpptFullPowerVoltageMin  Float @default(0)
+  maxPvInputW              Float @default(0)
+  maxInputCurrentPerMpptA  Float @default(0)
+  mpptCount                Float @default(0)
   priceUsd        Float
   active          Boolean  @default(true)
   createdAt       DateTime @default(now())

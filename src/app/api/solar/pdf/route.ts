@@ -18,6 +18,16 @@ export async function POST(req: NextRequest) {
   const catalog = sanitizeCatalog(body.catalog);
   const design = computeSystemDesign(loads, site, {}, catalog);
 
+  if (design.hasBlockingFailures) {
+    return NextResponse.json(
+      {
+        error: 'This design fails one or more Design Rules v1.0 safety checks and cannot be issued as a proposal yet.',
+        failures: design.ruleResults.filter((r) => r.severity === 'FAIL'),
+      },
+      { status: 422 }
+    );
+  }
+
   const appUrl = new URL(req.url).origin;
   const pdfBytes = await generateSolarProposalPdf({ design, site, appUrl });
 

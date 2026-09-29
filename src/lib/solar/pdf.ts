@@ -20,6 +20,25 @@ function text(page: PDFPage, str: string, x: number, y: number, font: PDFFont, s
   page.drawText(str, { x, y, size, font, color });
 }
 
+/** Wraps text to fit maxWidth, breaking on word boundaries (falls back to a hard break for a single overlong word). */
+function wrapText(str: string, font: PDFFont, size: number, maxWidth: number): string[] {
+  const words = str.split(/\s+/).filter(Boolean);
+  if (!words.length) return [''];
+  const lines: string[] = [];
+  let line = '';
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (font.widthOfTextAtSize(test, size) > maxWidth && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
 function money(usd: number): string {
   return `$${usd.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 }
@@ -114,30 +133,50 @@ export async function generateSolarProposalPdf({ design, site, appUrl }: Proposa
   text(p1, 'roof structure/orientation, and local electrical wiring regulations.', margin, 58, helv, 8, FAINT);
   text(p1, 'SmartTech Academy — smarttech.academy', margin, 40, helvBold, 8.5, INK);
 
-  // ---------- Page 2: BOM + financials + QR ----------
-  const p2 = pdf.addPage([W, H]);
-  p2.drawRectangle({ x: 0, y: 0, width: W, height: H, color: PAPER });
-  p2.drawRectangle({ x: 0, y: H - 60, width: W, height: 60, color: BLUE });
-  text(p2, 'Bill of Materials & Cost Breakdown', margin, H - 38, helvBold, 16, PAPER);
+  // ---------- Page 2+: BOM + financials + QR (overflows to a continuation page if the BOM is long) ----------
+  const DETAIL_COL_WIDTH = 170; // margin+160 .. margin+340 (QTY column)
+  function addBomPage(title: string): PDFPage {
+    const p = pdf.addPage([W, H]);
+    p.drawRectangle({ x: 0, y: 0, width: W, height: H, color: PAPER });
+    p.drawRectangle({ x: 0, y: H - 60, width: W, height: 60, color: BLUE });
+    text(p, title, margin, H - 38, helvBold, 16, PAPER);
+    return p;
+  }
+  function drawBomColumnHeader(p: PDFPage, atY: number): number {
+    text(p, 'ITEM', margin, atY, helvBold, 9, FAINT);
+    text(p, 'DETAIL', margin + 160, atY, helvBold, 9, FAINT);
+    text(p, 'QTY', margin + 340, atY, helvBold, 9, FAINT);
+    text(p, 'UNIT', margin + 385, atY, helvBold, 9, FAINT);
+    text(p, 'TOTAL', W - margin - 60, atY, helvBold, 9, FAINT);
+    let y = atY - 8;
+    p.drawLine({ start: { x: margin, y }, end: { x: W - margin, y }, thickness: 1, color: rgb(0.89, 0.92, 0.95) });
+    y -= 18;
+    return y;
+  }
 
-  let ty = H - 100;
-  text(p2, 'ITEM', margin, ty, helvBold, 9, FAINT);
-  text(p2, 'DETAIL', margin + 160, ty, helvBold, 9, FAINT);
-  text(p2, 'QTY', margin + 340, ty, helvBold, 9, FAINT);
-  text(p2, 'UNIT', margin + 385, ty, helvBold, 9, FAINT);
-  text(p2, 'TOTAL', W - margin - 60, ty, helvBold, 9, FAINT);
-  ty -= 8;
-  p2.drawLine({ start: { x: margin, y: ty }, end: { x: W - margin, y: ty }, thickness: 1, color: rgb(0.89, 0.92, 0.95) });
-  ty -= 18;
+  let p2 = addBomPage('Bill of Materials & Cost Breakdown');
+  let ty = drawBomColumnHeader(p2, H - 100);
 
   for (const line of design.bom) {
+    const detailLines = wrapText(line.detail, helv, 8.5, DETAIL_COL_WIDTH);
+    const rowHeight = 11 * Math.max(1, detailLines.length) + 11;
+    if (ty - rowHeight < 150) {
+      p2 = addBomPage('Bill of Materials (continued)');
+      ty = drawBomColumnHeader(p2, H - 100);
+    }
     text(p2, line.label.slice(0, 30), margin, ty, helvBold, 9.5, INK);
-    text(p2, line.detail.slice(0, 42), margin + 160, ty, helv, 8.5, FAINT);
+    detailLines.forEach((dl, i) => text(p2, dl, margin + 160, ty - i * 11, helv, 8.5, FAINT));
     text(p2, String(line.qty), margin + 340, ty, helv, 9, INK);
     text(p2, money(line.unitPriceUsd), margin + 385, ty, helv, 9, INK);
     const totalStr = money(line.totalUsd);
     text(p2, totalStr, W - margin - helvBold.widthOfTextAtSize(totalStr, 9.5), ty, helvBold, 9.5, INK);
-    ty -= 22;
+    ty -= rowHeight;
+  }
+
+  // Totals + financial summary need ~220pt — start a fresh page if the BOM ran long.
+  if (ty < 260) {
+    p2 = addBomPage('Cost Breakdown & Financial Summary');
+    ty = H - 100;
   }
 
   ty -= 6;
@@ -176,19 +215,10 @@ export async function generateSolarProposalPdf({ design, site, appUrl }: Proposa
     ty -= 12;
     text(p2, 'Notes', margin, ty, helvBold, 11, INK);
     ty -= 16;
-    const words = site.notes.split(/\s+/);
-    let line = '';
-    for (const word of words) {
-      const test = line ? `${line} ${word}` : word;
-      if (helv.widthOfTextAtSize(test, 9) > W - margin * 2) {
-        text(p2, line, margin, ty, helv, 9, FAINT);
-        ty -= 13;
-        line = word;
-      } else {
-        line = test;
-      }
+    for (const line of wrapText(site.notes, helv, 9, W - margin * 2)) {
+      text(p2, line, margin, ty, helv, 9, FAINT);
+      ty -= 13;
     }
-    if (line) text(p2, line, margin, ty, helv, 9, FAINT);
   }
 
   // QR + footer
@@ -196,7 +226,7 @@ export async function generateSolarProposalPdf({ design, site, appUrl }: Proposa
   const qrDataUrl = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 200, color: { dark: '#0b1526', light: '#ffffff' } });
   const qrImage = await pdf.embedPng(Buffer.from(qrDataUrl.split(',')[1], 'base64'));
   p2.drawImage(qrImage, { x: W - margin - 70, y: 40, width: 70, height: 70 });
-  text(p2, 'Redesign / recalculate', W - margin - 70, 32, helv, 7, FAINT);
+  text(p2, 'Scan to view online', W - margin - 70, 32, helv, 7, FAINT);
   text(p2, 'Prepared with SmartTech Solar Calculator', margin, 60, helvBold, 9, INK);
   text(p2, 'Indicative equipment, pricing and sizing — confirm with a licensed installer before purchase.', margin, 46, helv, 7.5, FAINT);
 

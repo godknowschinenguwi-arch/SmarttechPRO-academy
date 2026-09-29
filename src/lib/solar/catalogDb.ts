@@ -11,6 +11,10 @@ export const panelStore = makeCatalogStore<CatalogPanel>('SolarPanel', [
   { name: 'imp', kind: 'number' },
   { name: 'voc', kind: 'number' },
   { name: 'isc', kind: 'number' },
+  { name: 'areaM2', kind: 'number' },
+  { name: 'tempCoeffPmaxPctPerC', kind: 'number' },
+  { name: 'tempCoeffVocPctPerC', kind: 'number' },
+  { name: 'tempCoeffIscPctPerC', kind: 'number' },
   { name: 'priceUsd', kind: 'number' },
 ]);
 
@@ -23,6 +27,8 @@ export const batteryStore = makeCatalogStore<CatalogBattery>('SolarBattery', [
   { name: 'maxDodPct', kind: 'number' },
   { name: 'roundTripEff', kind: 'number' },
   { name: 'cycleLife', kind: 'number' },
+  { name: 'maxChargeCurrentA', kind: 'number' },
+  { name: 'maxDischargeCurrentA', kind: 'number' },
   { name: 'priceUsd', kind: 'number' },
 ]);
 
@@ -35,6 +41,11 @@ export const inverterStore = makeCatalogStore<CatalogInverter>('SolarInverter', 
   { name: 'voltageOptions', kind: 'json' },
   { name: 'mpptBuiltIn', kind: 'boolean' },
   { name: 'efficiencyPct', kind: 'number' },
+  { name: 'maxDcInputVoltage', kind: 'number' },
+  { name: 'mpptFullPowerVoltageMin', kind: 'number' },
+  { name: 'maxPvInputW', kind: 'number' },
+  { name: 'maxInputCurrentPerMpptA', kind: 'number' },
+  { name: 'mpptCount', kind: 'number' },
   { name: 'priceUsd', kind: 'number' },
 ]);
 

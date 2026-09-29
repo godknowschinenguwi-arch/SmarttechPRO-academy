@@ -193,6 +193,8 @@ CREATE TABLE IF NOT EXISTS AuditLog (
 CREATE TABLE IF NOT EXISTS SolarPanel (
   id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL,
   wattage REAL NOT NULL, vmp REAL NOT NULL, imp REAL NOT NULL, voc REAL NOT NULL, isc REAL NOT NULL,
+  areaM2 REAL NOT NULL DEFAULT 2.3, tempCoeffPmaxPctPerC REAL NOT NULL DEFAULT -0.35,
+  tempCoeffVocPctPerC REAL NOT NULL DEFAULT -0.28, tempCoeffIscPctPerC REAL NOT NULL DEFAULT 0.05,
   priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1,
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -200,16 +202,34 @@ CREATE TABLE IF NOT EXISTS SolarPanel (
 CREATE TABLE IF NOT EXISTS SolarBattery (
   id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, chemistry TEXT NOT NULL,
   voltage REAL NOT NULL, ah REAL NOT NULL, maxDodPct REAL NOT NULL, roundTripEff REAL NOT NULL,
-  cycleLife INTEGER NOT NULL, priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1,
+  cycleLife INTEGER NOT NULL, maxChargeCurrentA REAL NOT NULL DEFAULT 20, maxDischargeCurrentA REAL NOT NULL DEFAULT 20,
+  priceUsd REAL NOT NULL, active INTEGER NOT NULL DEFAULT 1,
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS SolarInverter (
   id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, type TEXT NOT NULL,
   continuousW REAL NOT NULL, surgeW REAL NOT NULL, voltageOptions TEXT NOT NULL,
-  mpptBuiltIn INTEGER NOT NULL DEFAULT 0, efficiencyPct REAL NOT NULL, priceUsd REAL NOT NULL,
+  mpptBuiltIn INTEGER NOT NULL DEFAULT 0, efficiencyPct REAL NOT NULL,
+  maxDcInputVoltage REAL NOT NULL DEFAULT 0, mpptFullPowerVoltageMin REAL NOT NULL DEFAULT 0,
+  maxPvInputW REAL NOT NULL DEFAULT 0, maxInputCurrentPerMpptA REAL NOT NULL DEFAULT 0, mpptCount REAL NOT NULL DEFAULT 0,
+  priceUsd REAL NOT NULL,
   active INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Migration for solar catalog tables created before the Design Rules v1.0
+-- columns existed (ignored by db.ts when the column is already present).
+ALTER TABLE SolarPanel ADD COLUMN areaM2 REAL NOT NULL DEFAULT 2.3;
+ALTER TABLE SolarPanel ADD COLUMN tempCoeffPmaxPctPerC REAL NOT NULL DEFAULT -0.35;
+ALTER TABLE SolarPanel ADD COLUMN tempCoeffVocPctPerC REAL NOT NULL DEFAULT -0.28;
+ALTER TABLE SolarPanel ADD COLUMN tempCoeffIscPctPerC REAL NOT NULL DEFAULT 0.05;
+ALTER TABLE SolarBattery ADD COLUMN maxChargeCurrentA REAL NOT NULL DEFAULT 20;
+ALTER TABLE SolarBattery ADD COLUMN maxDischargeCurrentA REAL NOT NULL DEFAULT 20;
+ALTER TABLE SolarInverter ADD COLUMN maxDcInputVoltage REAL NOT NULL DEFAULT 0;
+ALTER TABLE SolarInverter ADD COLUMN mpptFullPowerVoltageMin REAL NOT NULL DEFAULT 0;
+ALTER TABLE SolarInverter ADD COLUMN maxPvInputW REAL NOT NULL DEFAULT 0;
+ALTER TABLE SolarInverter ADD COLUMN maxInputCurrentPerMpptA REAL NOT NULL DEFAULT 0;
+ALTER TABLE SolarInverter ADD COLUMN mpptCount REAL NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS SolarController (
   id TEXT PRIMARY KEY, brand TEXT NOT NULL, model TEXT NOT NULL, type TEXT NOT NULL,

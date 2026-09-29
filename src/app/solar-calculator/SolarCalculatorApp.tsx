@@ -14,6 +14,7 @@ import { computeSystemDesign, computeUpgradeDesign, defaultSiteConfig, defaultEx
 import { APPLIANCE_LIBRARY } from '@/lib/solar/appliances';
 import { buildQuoteWhatsAppMessage } from '@/lib/solar/whatsapp';
 import { whatsappLink } from '@/lib/contact';
+import { sanitizeLoads, sanitizeSite } from '@/lib/solar/sanitize';
 import type { LoadItem, Scenario, SolarCatalog } from '@/lib/solar/types';
 
 const STORAGE_KEY = 'sta_solar_scenarios_v1';
@@ -122,8 +123,11 @@ export default function SolarCalculatorApp({
   }
 
   function loadScenario(s: Scenario) {
-    setLoads(s.loads);
-    setSite(s.site);
+    // Scenarios saved before newer SiteConfig/LoadItem fields existed (especially
+    // browser-localStorage ones, which skip server-side sanitization) are
+    // normalized here so the UI never renders an undefined field.
+    setLoads(sanitizeLoads(s.loads));
+    setSite(sanitizeSite(s.site));
     setTab('design');
   }
 
@@ -148,6 +152,12 @@ export default function SolarCalculatorApp({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ loads, site, catalog }),
       });
+      if (res.status === 422) {
+        const data = await res.json().catch(() => ({}));
+        const failures = (data.failures ?? []).map((f: { message: string }) => `• ${f.message}`).join('\n');
+        alert(`This design fails the safety checklist and can't be issued as a proposal yet:\n\n${failures || data.error}\n\nSee the "Design Rules v1.0" panel on the Design tab for details.`);
+        return;
+      }
       if (!res.ok) throw new Error('Failed to generate PDF');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
