@@ -1,7 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { LOCATIONS } from '@/lib/solar/locations';
-import type { SiteConfig, SystemType, BatteryChemistry, SystemVoltage } from '@/lib/solar/types';
+import type { SiteConfig, SystemType, BatteryChemistry, SystemVoltage, MountingMethod } from '@/lib/solar/types';
+
+const MOUNTING_METHODS: { id: MountingMethod; label: string; blurb: string }[] = [
+  { id: 'FLUSH', label: 'Flush roof-mount', blurb: 'Panels close to the roof surface — highest cell temperature, lowest yield (~70% PR).' },
+  { id: 'STANDOFF', label: 'Standoff roof-mount', blurb: 'Panels tilted on rails with an air gap — the common case (~78% PR).' },
+  { id: 'GROUND', label: 'Ground-mount', blurb: 'Free-standing rack, best airflow around the modules (~80% PR).' },
+];
 
 const SYSTEM_TYPES: { id: SystemType; label: string; blurb: string }[] = [
   { id: 'OFF_GRID', label: 'Off-grid', blurb: 'No utility connection — panels + battery cover 100% of demand.' },
@@ -161,6 +167,38 @@ export default function SiteConfigPanel({
             ))}
           </div>
         </div>
+
+        <div>
+          <label className="mb-2 block text-xs font-semibold text-ink-soft">Mounting method</label>
+          <div className="grid gap-2">
+            {MOUNTING_METHODS.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => set('mountingMethod', m.id)}
+                className={`rounded-xl border p-3 text-left transition ${
+                  site.mountingMethod === m.id ? 'border-brand-600 bg-brand-50' : 'border-surface-line hover:border-brand-300'
+                }`}
+              >
+                <p className={`text-sm font-bold ${site.mountingMethod === m.id ? 'text-brand-700' : 'text-ink'}`}>{m.label}</p>
+                <p className="text-xs text-ink-faint">{m.blurb}</p>
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-[11px] text-ink-faint">
+            Drives the array&apos;s real-world performance ratio — cell temperature (and yield) differs a lot by mount.
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-ink-soft">Usable roof area (m²)</label>
+          <input
+            type="number" min={0} step={1}
+            className="input"
+            value={site.roofAreaM2}
+            onChange={(e) => set('roofAreaM2', Math.max(0, Number(e.target.value) || 0))}
+          />
+          <p className="mt-1 text-[11px] text-ink-faint">Checked against the array footprint (module area x count x walkway/edge spacing) before the array is finalised.</p>
+        </div>
       </div>
 
       <div className="card flex flex-col gap-4 p-5">
@@ -186,6 +224,19 @@ export default function SiteConfigPanel({
               onChange={(e) => set('autonomyDays', Number(e.target.value))}
               className="w-full accent-brand-600"
             />
+          </div>
+
+          <div>
+            <label className="mb-1 flex justify-between text-xs font-semibold text-ink-soft">
+              <span>Daytime load fraction</span> <span>{Math.round(site.daytimeLoadFractionPct * 100)}%</span>
+            </label>
+            <input
+              type="range" min={0} max={1} step={0.05}
+              value={site.daytimeLoadFractionPct}
+              onChange={(e) => set('daytimeLoadFractionPct', Number(e.target.value))}
+              className="w-full accent-brand-600"
+            />
+            <p className="mt-1 text-[11px] text-ink-faint">Share of daily energy used while the sun is up — the rest must come from the battery overnight (used in the worst-month recharge check).</p>
           </div>
 
           <div>
@@ -220,7 +271,7 @@ export default function SiteConfigPanel({
         </button>
         {advanced && (
           <div className="grid grid-cols-2 gap-3 rounded-xl bg-surface-soft p-3">
-            <PctField label="Panel derating" value={site.panelDeratingPct} onChange={(v) => set('panelDeratingPct', v)} />
+            <PctField label="Dust/soiling derate" value={site.panelDeratingPct} onChange={(v) => set('panelDeratingPct', v)} />
             <PctField label="Inverter efficiency" value={site.inverterEfficiencyPct} onChange={(v) => set('inverterEfficiencyPct', v)} />
             <PctField label="Wiring loss" value={site.wiringLossPct} onChange={(v) => set('wiringLossPct', v)} />
             <PctField label="Install/BOS buffer" value={site.installBufferPct} onChange={(v) => set('installBufferPct', v)} />

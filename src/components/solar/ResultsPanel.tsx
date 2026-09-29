@@ -11,6 +11,13 @@ const WARN_STYLE: Record<string, string> = {
   critical: 'bg-rose-50 text-rose-700 border-rose-200',
 };
 
+const RULE_STYLE: Record<string, string> = {
+  FAIL: 'bg-rose-50 text-rose-700 border-rose-200',
+  WARN: 'bg-amber-50 text-amber-700 border-amber-200',
+  PASS: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+};
+const RULE_ICON: Record<string, string> = { FAIL: '⛔', WARN: '⚠️', PASS: '✅' };
+
 export default function ResultsPanel({ design, site }: { design: DesignResult; site: SiteConfig }) {
   const { code } = useCurrency();
   const financing = useMemo(
@@ -18,8 +25,32 @@ export default function ResultsPanel({ design, site }: { design: DesignResult; s
     [site, design.totalUsd, design.estMonthlySavingsUsd]
   );
 
+  const failCount = design.ruleResults.filter((r) => r.severity === 'FAIL').length;
+  const warnCount = design.ruleResults.filter((r) => r.severity === 'WARN').length;
+
   return (
     <div className="flex flex-col gap-6">
+      {design.ruleResults.length > 0 && (
+        <div className={`card overflow-hidden border-2 ${failCount > 0 ? 'border-rose-300' : warnCount > 0 ? 'border-amber-300' : 'border-emerald-300'}`}>
+          <div className={`flex items-center justify-between px-4 py-2.5 ${failCount > 0 ? 'bg-rose-50' : warnCount > 0 ? 'bg-amber-50' : 'bg-emerald-50'}`}>
+            <h3 className="font-display text-sm font-bold text-ink">Design Rules v1.0 — safety &amp; commercial check</h3>
+            <span className={`text-xs font-bold ${failCount > 0 ? 'text-rose-700' : warnCount > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+              {failCount > 0 ? `${failCount} FAIL — proposal PDF blocked` : warnCount > 0 ? `${warnCount} warning${warnCount !== 1 ? 's' : ''} — internal only` : 'All checks clear'}
+            </span>
+          </div>
+          <div className="flex flex-col gap-2 p-3">
+            {design.ruleResults.filter((r) => r.severity !== 'PASS').map((r, i) => (
+              <div key={i} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${RULE_STYLE[r.severity]}`}>
+                {RULE_ICON[r.severity]} <span className="font-mono">[{r.id}]</span> {r.message}
+              </div>
+            ))}
+            {failCount === 0 && warnCount === 0 && (
+              <p className="px-1 text-xs font-semibold text-emerald-700">✅ No FAIL or WARN findings against the company&apos;s Design Rules v1.0 checklist.</p>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <SummaryStat label="Array size" value={`${(design.arrayWpActual / 1000).toFixed(2)} kWp`} sub={`${design.panelCount} panels`} />
         <SummaryStat label="Battery bank" value={design.batteryTotalCount ? `${design.batteryUsableKwh.toFixed(1)} kWh` : 'None'} sub={design.batteryTotalCount ? `${design.batteryTotalCount} batteries` : 'Grid-tied'} />
@@ -90,6 +121,11 @@ export default function ResultsPanel({ design, site }: { design: DesignResult; s
             <Row k="Charge current" v={`${design.chargeCurrentA.toFixed(1)} A`} />
             <Row k="DC cable (indicative)" v={`${design.dcCableSizeMm2} mm²`} />
             <Row k="AC cable (indicative)" v={`${design.acCableSizeMm2} mm²`} />
+            <Row k="Performance ratio" v={`${(design.performanceRatio * 100).toFixed(0)}% (${design.mountingMethod.toLowerCase()})`} />
+            <Row k="DC:AC ratio" v={design.dcAcRatio.toFixed(2)} />
+            {design.stringSeriesCount > 1 && <Row k="String config" v={`${design.stringSeriesCount}S x ${design.stringParallelCount} across ${design.mpptsUsed} MPPT${design.mpptsUsed !== 1 ? 's' : ''}`} />}
+            <Row k="Worst-month recharge margin" v={`${design.worstMonthMarginPct >= 0 ? '+' : ''}${design.worstMonthMarginPct.toFixed(0)}%`} />
+            <Row k="Roof area required" v={`${design.roofAreaRequiredM2.toFixed(1)} m²`} />
           </dl>
         </div>
         <div className="card p-4">

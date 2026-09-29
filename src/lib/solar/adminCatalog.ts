@@ -39,6 +39,10 @@ export function coerceCatalogFields(kind: CatalogKind, body: Record<string, unkn
     if (has('imp')) out.imp = Math.max(0, num(body.imp));
     if (has('voc')) out.voc = Math.max(0, num(body.voc));
     if (has('isc')) out.isc = Math.max(0, num(body.isc));
+    if (has('areaM2')) out.areaM2 = Math.max(0.1, num(body.areaM2, 2));
+    if (has('tempCoeffPmaxPctPerC')) out.tempCoeffPmaxPctPerC = num(body.tempCoeffPmaxPctPerC, -0.35);
+    if (has('tempCoeffVocPctPerC')) out.tempCoeffVocPctPerC = num(body.tempCoeffVocPctPerC, -0.28);
+    if (has('tempCoeffIscPctPerC')) out.tempCoeffIscPctPerC = num(body.tempCoeffIscPctPerC, 0.05);
   } else if (kind === 'battery') {
     if (has('chemistry')) out.chemistry = ['LFP', 'AGM', 'GEL', 'FLOODED'].includes(body.chemistry as string) ? body.chemistry : 'LFP';
     if (has('voltage')) out.voltage = Math.max(1, num(body.voltage));
@@ -46,6 +50,8 @@ export function coerceCatalogFields(kind: CatalogKind, body: Record<string, unkn
     if (has('maxDodPct')) out.maxDodPct = Math.min(1, Math.max(0.1, num(body.maxDodPct, 0.5)));
     if (has('roundTripEff')) out.roundTripEff = Math.min(1, Math.max(0.1, num(body.roundTripEff, 0.85)));
     if (has('cycleLife')) out.cycleLife = Math.max(0, num(body.cycleLife));
+    if (has('maxChargeCurrentA')) out.maxChargeCurrentA = Math.max(0, num(body.maxChargeCurrentA, 20));
+    if (has('maxDischargeCurrentA')) out.maxDischargeCurrentA = Math.max(0, num(body.maxDischargeCurrentA, 20));
   } else if (kind === 'inverter') {
     if (has('type')) out.type = ['OFF_GRID', 'HYBRID', 'GRID_TIE'].includes(body.type as string) ? body.type : 'HYBRID';
     if (has('continuousW')) out.continuousW = Math.max(1, num(body.continuousW));
@@ -56,6 +62,11 @@ export function coerceCatalogFields(kind: CatalogKind, body: Record<string, unkn
     }
     if (has('mpptBuiltIn')) out.mpptBuiltIn = !!body.mpptBuiltIn;
     if (has('efficiencyPct')) out.efficiencyPct = Math.min(1, Math.max(0.1, num(body.efficiencyPct, 0.9)));
+    if (has('maxDcInputVoltage')) out.maxDcInputVoltage = Math.max(0, num(body.maxDcInputVoltage));
+    if (has('mpptFullPowerVoltageMin')) out.mpptFullPowerVoltageMin = Math.max(0, num(body.mpptFullPowerVoltageMin));
+    if (has('maxPvInputW')) out.maxPvInputW = Math.max(0, num(body.maxPvInputW));
+    if (has('maxInputCurrentPerMpptA')) out.maxInputCurrentPerMpptA = Math.max(0, num(body.maxInputCurrentPerMpptA));
+    if (has('mpptCount')) out.mpptCount = Math.max(0, num(body.mpptCount));
   } else if (kind === 'controller') {
     if (has('type')) out.type = body.type === 'PWM' ? 'PWM' : 'MPPT';
     if (has('maxAmps')) out.maxAmps = Math.max(1, num(body.maxAmps));

@@ -1,4 +1,5 @@
 import { PANELS, BATTERIES, INVERTERS, CONTROLLERS } from './catalog';
+import { DESIGN_RULES_CONFIG, validateDesign } from './designRules';
 import type {
   LoadItem,
   SiteConfig,
@@ -12,11 +13,12 @@ import type {
   ExistingSystem,
   UpgradeResult,
   SolarCatalog,
+  MountingMethod,
 } from './types';
 
 export const DEFAULT_CATALOG: SolarCatalog = { panels: PANELS, batteries: BATTERIES, inverters: INVERTERS, controllers: CONTROLLERS };
 
-const BALANCE_OF_SYSTEM_PCT = 0.12; // mounting, DC/AC cabling, breakers, combiner box, earthing
+const BALANCE_OF_SYSTEM_PCT = 0.08; // mounting rails, generic DC/AC cabling, combiner box (mandatory safety items are now itemised separately)
 const ARRAY_SAFETY_FACTOR = 1.25; // NEC-style safety factor for charge current sizing
 const INVERTER_SAFETY_FACTOR = 1.25;
 
@@ -31,6 +33,95 @@ export function cableForCurrent(amps: number): number {
   const target = amps * 1.25;
   const match = CABLE_AMPACITY.find(([maxAmps]) => maxAmps >= target);
   return match ? match[1] : CABLE_AMPACITY[CABLE_AMPACITY.length - 1][1];
+}
+
+function performanceRatioFor(mounting: MountingMethod): number {
+  const pr = DESIGN_RULES_CONFIG.pr;
+  return mounting === 'FLUSH' ? pr.flush : mounting === 'GROUND' ? pr.ground : pr.standoff;
+}
+
+function cellRiseFor(mounting: MountingMethod): number {
+  const t = DESIGN_RULES_CONFIG.temp;
+  return mounting === 'FLUSH' ? t.cellRise_flush : mounting === 'GROUND' ? t.cellRise_ground : t.cellRise_standoff;
+}
+
+/** Temperature-corrected Voc (cold), Vmp (hot) and Isc (hot) for one panel — see Design Rules v1.0 §2. */
+function tempCorrectedElectricals(panel: CatalogPanel, mounting: MountingMethod) {
+  const cfg = DESIGN_RULES_CONFIG;
+  const hotCellTempC = cfg.temp.designMaxAmb_C + cellRiseFor(mounting);
+  const coldTempC = cfg.temp.designMin_C;
+
+  const vocCold = panel.voc * (1 + (panel.tempCoeffVocPctPerC / 100) * (coldTempC - 25));
+  const betaVmp = panel.tempCoeffPmaxPctPerC - panel.tempCoeffIscPctPerC; // gamma_Pmax - alpha_Isc, steeper than beta_Voc
+  const vmpHot = panel.vmp * (1 + (betaVmp / 100) * (hotCellTempC - 25));
+  const iscHot = panel.isc * (1 + (panel.tempCoeffIscPctPerC / 100) * (hotCellTempC - 25));
+
+  return { vocCold, vmpHot, iscHot };
+}
+
+interface StringConfig {
+  seriesCount: number;
+  parallelStringsTotal: number;
+  mpptsUsed: number;
+  panelCount: number;
+  arrayWpActual: number;
+  vocColdV: number;
+  vmpHotV: number;
+  iscHotAPerMppt: number;
+}
+
+/**
+ * Chooses a series/parallel string configuration for an MPPT-built-in inverter,
+ * subject to the cold-Voc ceiling and hot-Vmp floor (Design Rules v1.0 §2).
+ * Searches every series count in the safe voltage window and keeps the one
+ * that reaches arrayWpNeeded with the least overshoot — a single long string
+ * length gives fewer/lower-current parallel strings but coarser sizing
+ * granularity, so the "best" length depends on how big the array actually
+ * needs to be. This is the "fix the root cause" approach: it replaces a flat
+ * panel count with a real string design instead of just flagging a bad one.
+ */
+function computeMpptStringConfig(panel: CatalogPanel, inverter: CatalogInverter, inverterCount: number, mounting: MountingMethod, arrayWpNeeded: number): StringConfig {
+  const cfg = DESIGN_RULES_CONFIG;
+  const { vocCold, vmpHot, iscHot } = tempCorrectedElectricals(panel, mounting);
+
+  const vocCeilingSafe = inverter.maxDcInputVoltage * cfg.voltage.vocSafety;
+  const vmpFloorSafe = inverter.mpptFullPowerVoltageMin * cfg.voltage.vmpSafety;
+  const mpptCount = Math.max(1, inverter.mpptCount * Math.max(1, inverterCount));
+
+  const nsMaxByVoc = Math.max(1, vocCold > 0 ? Math.floor(vocCeilingSafe / vocCold) : 1);
+  const nsMinByVmp = Math.max(1, vmpHot > 0 ? Math.ceil(vmpFloorSafe / vmpHot) : 1);
+  const feasible = nsMinByVmp <= nsMaxByVoc;
+
+  function candidateFor(seriesCount: number): StringConfig {
+    const stringWp = seriesCount * panel.wattage;
+    const stringsNeeded = Math.max(mpptCount, Math.ceil(arrayWpNeeded / stringWp));
+    const parallelPerMppt = Math.ceil(stringsNeeded / mpptCount);
+    const parallelStringsTotal = parallelPerMppt * mpptCount;
+    const panelCount = seriesCount * parallelStringsTotal;
+    return {
+      seriesCount,
+      parallelStringsTotal,
+      mpptsUsed: mpptCount,
+      panelCount,
+      arrayWpActual: panelCount * panel.wattage,
+      vocColdV: seriesCount * vocCold,
+      vmpHotV: seriesCount * vmpHot,
+      iscHotAPerMppt: parallelPerMppt * iscHot,
+    };
+  }
+
+  if (!feasible) {
+    // No series count clears both the cold-Voc ceiling and the hot-Vmp floor —
+    // pick the Vmp-floor-driven count so validateDesign reports the actual shortfall.
+    return candidateFor(nsMinByVmp);
+  }
+
+  let best: StringConfig | null = null;
+  for (let ns = nsMaxByVoc; ns >= nsMinByVmp; ns--) {
+    const candidate = candidateFor(ns);
+    if (!best || candidate.arrayWpActual < best.arrayWpActual) best = candidate;
+  }
+  return best!;
 }
 
 export interface EngineOptions {
@@ -87,8 +178,17 @@ function pickController(catalog: SolarCatalog, chargeCurrentA: number, id?: stri
   return { controller: largest, count: Math.max(1, Math.ceil(chargeCurrentA / largest.maxAmps)) };
 }
 
-function bomLine(label: string, detail: string, qty: number, unitPriceUsd: number): BomLine {
-  return { label, detail, qty, unitPriceUsd, totalUsd: Math.round(qty * unitPriceUsd) };
+function bomLine(label: string, detail: string, qty: number, unitPriceUsd: number, tag?: string): BomLine {
+  return { label, detail, qty, unitPriceUsd, totalUsd: Math.round(qty * unitPriceUsd), tag };
+}
+
+// Standard DIN-rail DC SPD Ucpv ratings and indicative pricing — used to size the
+// mandatory DC surge protection device against the coldest-morning string Voc.
+const DC_SPD_OPTIONS: Array<[number, number]> = [[600, 35], [750, 45], [1000, 65], [1500, 95]];
+
+function pickDcSpd(requiredUcpvV: number): { ucpvV: number; priceUsd: number } {
+  const match = DC_SPD_OPTIONS.find(([ucpv]) => ucpv >= requiredUcpvV);
+  return match ? { ucpvV: match[0], priceUsd: match[1] } : { ucpvV: DC_SPD_OPTIONS[DC_SPD_OPTIONS.length - 1][0], priceUsd: DC_SPD_OPTIONS[DC_SPD_OPTIONS.length - 1][1] };
 }
 
 export function computeSystemDesign(loads: LoadItem[], site: SiteConfig, opts: EngineOptions = {}, catalog: SolarCatalog = DEFAULT_CATALOG): DesignResult {
@@ -109,19 +209,71 @@ export function computeSystemDesign(loads: LoadItem[], site: SiteConfig, opts: E
   }
 
   const isGridTied = site.systemType === 'GRID_TIED';
-  const batteryRoundTripEff = isGridTied ? 1 : pickBattery(catalog, site.batteryChemistry, opts.batteryId).roundTripEff;
+  const battery = pickBattery(catalog, site.batteryChemistry, opts.batteryId);
+  const batteryRoundTripEff = isGridTied ? 1 : battery.roundTripEff;
   const systemEfficiency = site.inverterEfficiencyPct * (1 - site.wiringLossPct) * batteryRoundTripEff;
   const dailyEnergyAdjustedWh = systemEfficiency > 0 ? dailyEnergyWh / systemEfficiency : dailyEnergyWh;
 
-  // --- Array sizing ---
-  const derating = Math.max(0.1, site.panelDeratingPct);
-  const arrayWpNeeded = site.psh > 0 ? dailyEnergyAdjustedWh / (site.psh * derating) : dailyEnergyAdjustedWh;
+  // The backup/recharge target: essential loads only for a hybrid design (grid covers
+  // the rest), the full demand for an off-grid design. Reused for both battery bank
+  // sizing and the worst-month recharge test below.
+  const backupTargetWh = site.systemType === 'HYBRID' && essentialDailyEnergyWh > 0 ? essentialDailyEnergyWh : dailyEnergyWh;
+
+  // --- Inverter sizing (picked from the load profile, independent of array size) ---
+  const { inverter, count: inverterCount } = pickInverter(
+    catalog,
+    site.systemType,
+    peakLoadW * INVERTER_SAFETY_FACTOR,
+    surgeLoadW,
+    opts.inverterId
+  );
+  if (inverter.continuousW * inverterCount < peakLoadW) {
+    warnings.push({ level: 'critical', message: 'Selected inverter capacity is below the calculated peak load even after paralleling available units — choose a larger model.' });
+  }
+
+  // --- Array & string sizing ---
+  const performanceRatio = performanceRatioFor(site.mountingMethod);
+  const otherLossDerate = Math.max(0.5, Math.min(1, site.panelDeratingPct)); // dust/soiling/mismatch only — temperature is in performanceRatio
+  const arrayWpNeeded = site.psh > 0 ? dailyEnergyAdjustedWh / (site.psh * performanceRatio * otherLossDerate) : dailyEnergyAdjustedWh;
   const panel = pickPanel(catalog, opts.panelId);
-  const panelCount = Math.max(1, Math.ceil(arrayWpNeeded / panel.wattage));
-  const arrayWpActual = panelCount * panel.wattage;
+
+  let panelCount: number;
+  let arrayWpActual: number;
+  let stringSeriesCount: number;
+  let stringParallelCount: number;
+  let mpptsUsed: number;
+  let stringVocColdV: number;
+  let stringVmpHotV: number;
+  let stringIscHotA: number;
+
+  if (inverter.mpptBuiltIn && inverter.maxDcInputVoltage > 0) {
+    const cfg = computeMpptStringConfig(panel, inverter, inverterCount, site.mountingMethod, arrayWpNeeded);
+    panelCount = cfg.panelCount;
+    arrayWpActual = cfg.arrayWpActual;
+    stringSeriesCount = cfg.seriesCount;
+    stringParallelCount = cfg.parallelStringsTotal;
+    mpptsUsed = cfg.mpptsUsed;
+    stringVocColdV = cfg.vocColdV;
+    stringVmpHotV = cfg.vmpHotV;
+    stringIscHotA = cfg.iscHotAPerMppt;
+  } else {
+    // Off-grid / external-controller topology: panels are matched to the charge
+    // controller's input window rather than a high-voltage MPPT string, which is a
+    // different (controller-specific) design convention outside this Design Rules
+    // doc's worked scope. String voltage/temperature checks don't apply here — the
+    // charge-controller pairing below still guards against an oversized array.
+    panelCount = Math.max(1, Math.ceil(arrayWpNeeded / panel.wattage));
+    arrayWpActual = panelCount * panel.wattage;
+    stringSeriesCount = 1;
+    stringParallelCount = panelCount;
+    mpptsUsed = 1;
+    const { vocCold, vmpHot, iscHot } = tempCorrectedElectricals(panel, site.mountingMethod);
+    stringVocColdV = vocCold;
+    stringVmpHotV = vmpHot;
+    stringIscHotA = iscHot;
+  }
 
   // --- Battery sizing ---
-  const battery = pickBattery(catalog, site.batteryChemistry, opts.batteryId);
   let batteryBankWh = 0;
   let batteryBankAh = 0;
   let batterySeriesCount = 0;
@@ -130,7 +282,6 @@ export function computeSystemDesign(loads: LoadItem[], site: SiteConfig, opts: E
   let batteryUsableKwh = 0;
 
   if (!isGridTied) {
-    const backupTargetWh = site.systemType === 'HYBRID' && essentialDailyEnergyWh > 0 ? essentialDailyEnergyWh : dailyEnergyWh;
     batteryBankWh = (backupTargetWh * site.autonomyDays) / battery.maxDodPct / battery.roundTripEff;
     batteryBankAh = batteryBankWh / site.systemVoltage;
 
@@ -150,18 +301,6 @@ export function computeSystemDesign(loads: LoadItem[], site: SiteConfig, opts: E
     }
   }
 
-  // --- Inverter sizing ---
-  const { inverter, count: inverterCount } = pickInverter(
-    catalog,
-    site.systemType,
-    peakLoadW * INVERTER_SAFETY_FACTOR,
-    surgeLoadW,
-    opts.inverterId
-  );
-  if (inverter.continuousW * inverterCount < peakLoadW) {
-    warnings.push({ level: 'critical', message: 'Selected inverter capacity is below the calculated peak load even after paralleling available units — choose a larger model.' });
-  }
-
   // --- Charge controller sizing (skipped when the inverter has built-in MPPT, e.g. hybrid/grid-tie) ---
   const chargeCurrentA = (arrayWpActual * ARRAY_SAFETY_FACTOR) / site.systemVoltage;
   let controller: CatalogController | null = null;
@@ -170,8 +309,12 @@ export function computeSystemDesign(loads: LoadItem[], site: SiteConfig, opts: E
     const picked = pickController(catalog, chargeCurrentA, opts.controllerId);
     controller = picked.controller;
     controllerCount = picked.count;
+    mpptsUsed = controllerCount;
     if (controller.maxAmps * controllerCount < chargeCurrentA) {
       warnings.push({ level: 'warn', message: 'Array current exceeds the largest single charge controller — multiple controllers/strings required.' });
+    }
+    if (stringVocColdV > controller.maxPvVoltage) {
+      warnings.push({ level: 'critical', message: `Panel cold-morning Voc (${stringVocColdV.toFixed(0)} V) exceeds the charge controller's max PV voltage (${controller.maxPvVoltage} V) — wire panels in a lower series count or choose a controller with a higher input window.` });
     }
   }
 
@@ -180,9 +323,40 @@ export function computeSystemDesign(loads: LoadItem[], site: SiteConfig, opts: E
   const acCurrentA = (inverter.continuousW * inverterCount) / (site.systemVoltage >= 48 ? 230 : 230);
   const acCableSizeMm2 = cableForCurrent(acCurrentA);
 
+  // --- Design Rules v1.0 derived metrics ---
+  const dcAcRatio = inverter.continuousW * inverterCount > 0 ? arrayWpActual / (inverter.continuousW * inverterCount) : 0;
+  const inverterLoadRatio = peakLoadW > 0 ? (inverter.continuousW * inverterCount) / peakLoadW : 0;
+  const roofAreaRequiredM2 = panel.areaM2 * panelCount * DESIGN_RULES_CONFIG.roof.spacingFactor;
+  const requiredDcSpdUcpvV = stringVocColdV > 0 ? stringVocColdV * DESIGN_RULES_CONFIG.dcSpdUcpvFactor : 0;
+
+  const worstMonthPsh = site.psh * DESIGN_RULES_CONFIG.worstMonthPshFactor;
+  let worstMonthMarginPct = 100;
+  if (!isGridTied) {
+    const worstMonthYieldWh = arrayWpActual * worstMonthPsh * performanceRatio;
+    const daytimeLoadWh = backupTargetWh * site.daytimeLoadFractionPct;
+    const eveningLoadWh = backupTargetWh * (1 - site.daytimeLoadFractionPct);
+    const requiredChargeWh = battery.roundTripEff > 0 ? eveningLoadWh / battery.roundTripEff : eveningLoadWh;
+    const netChargeAvailableWh = worstMonthYieldWh - daytimeLoadWh;
+    worstMonthMarginPct = requiredChargeWh > 0 ? (netChargeAvailableWh / requiredChargeWh - 1) * 100 : 100;
+  }
+
+  let batteryChargeHeadroomRatio = 0;
+  let batteryDischargeHeadroomRatio = 0;
+  if (!isGridTied && batteryTotalCount > 0) {
+    const batteryChargeCapacityW = batteryTotalCount * battery.maxChargeCurrentA * site.systemVoltage;
+    batteryChargeHeadroomRatio = arrayWpActual > 0 ? batteryChargeCapacityW / arrayWpActual : 1;
+
+    const inverterDcDrawW = inverter.efficiencyPct > 0 ? (inverter.continuousW * inverterCount) / inverter.efficiencyPct : inverter.continuousW * inverterCount;
+    const batteryDischargeCapacityW = batteryTotalCount * battery.maxDischargeCurrentA * site.systemVoltage;
+    batteryDischargeHeadroomRatio = inverterDcDrawW > 0 ? batteryDischargeCapacityW / inverterDcDrawW : 1;
+  }
+
   // --- BOM & cost ---
+  const stringDetail = stringSeriesCount > 1
+    ? `Solar PV panel (${stringSeriesCount}S x ${stringParallelCount} string${stringParallelCount !== 1 ? 's' : ''} across ${mpptsUsed} MPPT${mpptsUsed !== 1 ? 's' : ''})`
+    : 'Solar PV panel';
   const bom: BomLine[] = [];
-  bom.push(bomLine(`${panel.brand} ${panel.model}`, 'Solar PV panel', panelCount, panel.priceUsd));
+  bom.push(bomLine(`${panel.brand} ${panel.model}`, stringDetail, panelCount, panel.priceUsd));
   if (!isGridTied) {
     bom.push(bomLine(`${battery.brand} ${battery.model}`, `Battery bank (${batterySeriesCount}S${batteryParallelCount}P)`, batteryTotalCount, battery.priceUsd));
   }
@@ -190,16 +364,36 @@ export function computeSystemDesign(loads: LoadItem[], site: SiteConfig, opts: E
   if (controller) {
     bom.push(bomLine(`${controller.brand} ${controller.model}`, `${controller.type} charge controller`, controllerCount, controller.priceUsd));
   }
+
+  // Mandatory safety BOM (Design Rules v1.0 §7) — itemised, not folded into a lump
+  // "balance of system" figure, so there's always room for a properly sized DC SPD.
+  const dcSpd = pickDcSpd(requiredDcSpdUcpvV || 600);
+  bom.push(bomLine('DC surge protection device', `Type 2, DIN rail, Ucpv ${dcSpd.ucpvV}V`, 1, dcSpd.priceUsd, 'dc_spd'));
+  bom.push(bomLine('AC surge protection device', 'Type 2, DIN rail', 1, 35, 'ac_spd'));
+  bom.push(bomLine('DC isolator', `Rated for ${Math.ceil(chargeCurrentA || panel.isc * panelCount)}A`, isGridTied ? 1 : Math.max(1, mpptsUsed), 22, 'dc_isolator'));
+  bom.push(bomLine('AC isolator', `Rated for ${Math.ceil(acCurrentA)}A`, 1, 18, 'ac_isolator'));
+  bom.push(bomLine('Earthing', 'Earth electrode, earth bar and conductor', 1, 40, 'earth'));
+  bom.push(bomLine('Equipotential bonding', 'Array frame + DB bonding conductor', 1, 15, 'bonding'));
+  bom.push(bomLine('Warning/isolation labels', 'Dual-supply and isolation point labelling set', 1, 10, 'labels'));
+  bom.push(bomLine(
+    isGridTied ? 'PV supply sub-distribution board' : 'Essential-loads distribution board',
+    isGridTied ? 'PV isolation & monitoring sub-board' : 'Backed-up circuits, separated from non-essential loads',
+    1,
+    65,
+    'essential_db'
+  ));
+  bom.push(bomLine('System monitoring', 'Cloud/Wi-Fi monitoring dongle & app access', 1, 85, 'monitoring'));
+
   const equipmentSubtotal = bom.reduce((s, l) => s + l.totalUsd, 0);
   const bosUsd = Math.round(equipmentSubtotal * BALANCE_OF_SYSTEM_PCT);
-  bom.push(bomLine('Balance of system', 'Mounting, DC/AC cabling, breakers, combiner box, earthing (est.)', 1, bosUsd));
+  bom.push(bomLine('Balance of system', 'Mounting rails, generic DC/AC cabling, combiner box (est.)', 1, bosUsd));
 
   const equipmentTotalUsd = bom.reduce((s, l) => s + l.totalUsd, 0);
   const installBufferUsd = Math.round(equipmentTotalUsd * site.installBufferPct);
   const totalUsd = equipmentTotalUsd + installBufferUsd;
 
   // --- Financials ---
-  const estMonthlyProductionKwh = (arrayWpActual / 1000) * site.psh * derating * 30;
+  const estMonthlyProductionKwh = (arrayWpActual / 1000) * site.psh * performanceRatio * otherLossDerate * 30;
   const monthlyConsumptionKwh = (dailyEnergyWh / 1000) * 30;
   const offsetKwh = Math.min(estMonthlyProductionKwh, monthlyConsumptionKwh);
   const estMonthlySavingsUsd = offsetKwh * site.tariffUsdPerKwh;
@@ -212,7 +406,7 @@ export function computeSystemDesign(loads: LoadItem[], site: SiteConfig, opts: E
     warnings.push({ level: 'info', message: 'No battery in this design — loads will only run while the sun is up unless grid-backed.' });
   }
 
-  return {
+  const design: DesignResult = {
     dailyEnergyWh,
     dailyEnergyAdjustedWh,
     peakLoadW,
@@ -252,7 +446,36 @@ export function computeSystemDesign(loads: LoadItem[], site: SiteConfig, opts: E
     paybackYears,
 
     warnings,
+
+    mountingMethod: site.mountingMethod,
+    performanceRatio,
+    dcAcRatio,
+
+    stringSeriesCount,
+    stringParallelCount,
+    mpptsUsed,
+    stringVocColdV,
+    stringVmpHotV,
+    stringIscHotA,
+
+    worstMonthPsh,
+    worstMonthMarginPct,
+
+    batteryChargeHeadroomRatio,
+    batteryDischargeHeadroomRatio,
+    inverterLoadRatio,
+
+    roofAreaRequiredM2,
+    requiredDcSpdUcpvV,
+
+    ruleResults: [],
+    hasBlockingFailures: false,
   };
+
+  design.ruleResults = validateDesign(design, site);
+  design.hasBlockingFailures = design.ruleResults.some((r) => r.severity === 'FAIL');
+
+  return design;
 }
 
 export function defaultSiteConfig(): SiteConfig {
@@ -263,7 +486,10 @@ export function defaultSiteConfig(): SiteConfig {
     autonomyDays: 1,
     batteryChemistry: 'LFP',
     systemVoltage: 48,
-    panelDeratingPct: 0.8,
+    panelDeratingPct: 0.97,
+    mountingMethod: 'STANDOFF',
+    roofAreaM2: 40,
+    daytimeLoadFractionPct: 0.35,
     inverterEfficiencyPct: 0.93,
     wiringLossPct: 0.03,
     installBufferPct: 0.15,

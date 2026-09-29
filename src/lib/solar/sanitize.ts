@@ -36,7 +36,10 @@ export function sanitizeSite(input: unknown): SiteConfig {
     autonomyDays: Number.isFinite(s.autonomyDays) ? Math.min(10, Math.max(0, Number(s.autonomyDays))) : d.autonomyDays,
     batteryChemistry: ['LFP', 'AGM', 'GEL', 'FLOODED'].includes(s.batteryChemistry as string) ? (s.batteryChemistry as SiteConfig['batteryChemistry']) : d.batteryChemistry,
     systemVoltage: [12, 24, 48].includes(s.systemVoltage as number) ? (s.systemVoltage as SiteConfig['systemVoltage']) : d.systemVoltage,
-    panelDeratingPct: Number.isFinite(s.panelDeratingPct) ? Math.min(1, Math.max(0.1, Number(s.panelDeratingPct))) : d.panelDeratingPct,
+    panelDeratingPct: Number.isFinite(s.panelDeratingPct) ? Math.min(1, Math.max(0.5, Number(s.panelDeratingPct))) : d.panelDeratingPct,
+    mountingMethod: ['FLUSH', 'STANDOFF', 'GROUND'].includes(s.mountingMethod as string) ? (s.mountingMethod as SiteConfig['mountingMethod']) : d.mountingMethod,
+    roofAreaM2: Number.isFinite(s.roofAreaM2) ? Math.max(0, Number(s.roofAreaM2)) : d.roofAreaM2,
+    daytimeLoadFractionPct: Number.isFinite(s.daytimeLoadFractionPct) ? Math.min(1, Math.max(0, Number(s.daytimeLoadFractionPct))) : d.daytimeLoadFractionPct,
     inverterEfficiencyPct: Number.isFinite(s.inverterEfficiencyPct) ? Math.min(1, Math.max(0.1, Number(s.inverterEfficiencyPct))) : d.inverterEfficiencyPct,
     wiringLossPct: Number.isFinite(s.wiringLossPct) ? Math.min(0.5, Math.max(0, Number(s.wiringLossPct))) : d.wiringLossPct,
     installBufferPct: Number.isFinite(s.installBufferPct) ? Math.min(1, Math.max(0, Number(s.installBufferPct))) : d.installBufferPct,
@@ -73,6 +76,8 @@ export function sanitizeCatalog(input: unknown): SolarCatalog | undefined {
           id: str(p.id, `panel-${i}`, 40), brand: str(p.brand, 'Panel'), model: str(p.model, 'Panel'),
           wattage: num(p.wattage), vmp: num(p.vmp), imp: num(p.imp), voc: num(p.voc), isc: num(p.isc),
           priceUsd: num(p.priceUsd),
+          areaM2: num(p.areaM2, 2), tempCoeffPmaxPctPerC: num(p.tempCoeffPmaxPctPerC, -0.35),
+          tempCoeffVocPctPerC: num(p.tempCoeffVocPctPerC, -0.28), tempCoeffIscPctPerC: num(p.tempCoeffIscPctPerC, 0.05),
         };
       })
     : [];
@@ -85,6 +90,7 @@ export function sanitizeCatalog(input: unknown): SolarCatalog | undefined {
           chemistry: (['LFP', 'AGM', 'GEL', 'FLOODED'] as string[]).includes(b.chemistry ?? '') ? (b.chemistry as CatalogBattery['chemistry']) : 'LFP',
           voltage: num(b.voltage), ah: num(b.ah), maxDodPct: num(b.maxDodPct, 0.5), roundTripEff: num(b.roundTripEff, 0.85),
           cycleLife: num(b.cycleLife), priceUsd: num(b.priceUsd),
+          maxChargeCurrentA: num(b.maxChargeCurrentA, 20), maxDischargeCurrentA: num(b.maxDischargeCurrentA, 20),
         };
       })
     : [];
@@ -100,6 +106,8 @@ export function sanitizeCatalog(input: unknown): SolarCatalog | undefined {
           type: (['OFF_GRID', 'HYBRID', 'GRID_TIE'] as string[]).includes(v.type ?? '') ? (v.type as CatalogInverter['type']) : 'HYBRID',
           continuousW: num(v.continuousW), surgeW: num(v.surgeW), voltageOptions: voltageOptions.length ? voltageOptions : [48],
           mpptBuiltIn: !!v.mpptBuiltIn, efficiencyPct: num(v.efficiencyPct, 0.9), priceUsd: num(v.priceUsd),
+          maxDcInputVoltage: num(v.maxDcInputVoltage), mpptFullPowerVoltageMin: num(v.mpptFullPowerVoltageMin),
+          maxPvInputW: num(v.maxPvInputW), maxInputCurrentPerMpptA: num(v.maxInputCurrentPerMpptA), mpptCount: num(v.mpptCount),
         };
       })
     : [];

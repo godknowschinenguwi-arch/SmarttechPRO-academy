@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { computeSystemDesign, DEFAULT_CATALOG } from '@/lib/solar/engine';
+import { sanitizeLoads, sanitizeSite } from '@/lib/solar/sanitize';
 import { Price } from '@/components/CurrencyProvider';
 import type { Scenario, LoadItem, SiteConfig, SolarCatalog } from '@/lib/solar/types';
 
@@ -92,7 +93,9 @@ export default function ScenarioCompare({
             </thead>
             <tbody className="divide-y divide-surface-line">
               {scenarios.map((s) => {
-                const d = computeSystemDesign(s.loads, s.site, {}, catalog);
+                // Scenarios saved to browser localStorage (signed-out users) may predate
+                // newer SiteConfig/LoadItem fields — sanitize before recomputing.
+                const d = computeSystemDesign(sanitizeLoads(s.loads), sanitizeSite(s.site), {}, catalog);
                 return (
                   <tr key={s.id}>
                     <td className="px-4 py-3 font-semibold text-ink">{s.name}</td>

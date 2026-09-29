@@ -18,8 +18,10 @@ export async function GET() {
     name: r.name,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
-    loads: JSON.parse(r.loads),
-    site: JSON.parse(r.site),
+    // Older saved designs may predate newer SiteConfig/LoadItem fields — sanitize
+    // fills in sane defaults rather than returning a partially-shaped object.
+    loads: sanitizeLoads(JSON.parse(r.loads)),
+    site: sanitizeSite(JSON.parse(r.site)),
   }));
   return NextResponse.json({ designs });
 }
