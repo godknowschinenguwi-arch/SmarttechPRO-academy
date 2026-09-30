@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { LOCATIONS } from '@/lib/solar/locations';
+import { DESIGN_RULES_CONFIG } from '@/lib/solar/designRules';
 import type { SiteConfig, SystemType, BatteryChemistry, SystemVoltage, MountingMethod } from '@/lib/solar/types';
 
 const MOUNTING_METHODS: { id: MountingMethod; label: string; blurb: string }[] = [
@@ -37,6 +38,14 @@ export default function SiteConfigPanel({
 
   function set<K extends keyof SiteConfig>(key: K, value: SiteConfig[K]) {
     onChange({ ...site, [key]: value });
+  }
+
+  function setSystemType(id: SystemType) {
+    // The worst-month recharge test and BAT-SMALL check use a per-type minimum
+    // autonomy (Design Rules v1.0) — default to it on switch so an unnoticed
+    // stale value from a previous system type doesn't cause an avoidable FAIL.
+    const defaultAutonomy = id === 'OFF_GRID' ? DESIGN_RULES_CONFIG.battery.autonomyDaysOffGrid : DESIGN_RULES_CONFIG.battery.autonomyDaysHybrid;
+    onChange({ ...site, systemType: id, autonomyDays: id === 'GRID_TIED' ? site.autonomyDays : defaultAutonomy });
   }
 
   function setLocation(id: string) {
@@ -156,7 +165,7 @@ export default function SiteConfigPanel({
             {SYSTEM_TYPES.map((t) => (
               <button
                 key={t.id}
-                onClick={() => set('systemType', t.id)}
+                onClick={() => setSystemType(t.id)}
                 className={`rounded-xl border p-3 text-left transition ${
                   site.systemType === t.id ? 'border-brand-600 bg-brand-50' : 'border-surface-line hover:border-brand-300'
                 }`}
