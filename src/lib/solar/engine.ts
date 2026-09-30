@@ -138,34 +138,173 @@ function pickPanel(catalog: SolarCatalog, id?: string): CatalogPanel {
   const sorted = pool.slice().sort((a, b) => a.wattage - b.wattage);
   return sorted[Math.floor(sorted.length / 2)];
 }
-function pickBattery(catalog: SolarCatalog, chemistry: SiteConfig['batteryChemistry'], id?: string): CatalogBattery {
+
+/**
+ * Picks the panel model, preferring the default (median-wattage) choice, but
+ * switching to a higher power-density (W/m²) panel from the catalog when the
+ * default's footprint won't fit the declared roof area — feeding the roof
+ * constraint back into sizing instead of only flagging ROOF-AREA after the
+ * fact. Skipped when the caller pins a specific panelId.
+ */
+function pickPanelForRoof(catalog: SolarCatalog, site: SiteConfig, arrayWpNeeded: number, id?: string): CatalogPanel {
+  const defaultPanel = pickPanel(catalog, id);
+  if (id || !(site.roofAreaM2 > 0)) return defaultPanel;
+
+  const spacing = DESIGN_RULES_CONFIG.roof.spacingFactor;
+  const fits = (p: CatalogPanel) => {
+    const estCount = Math.max(1, Math.ceil(arrayWpNeeded / p.wattage));
+    return estCount * p.areaM2 * spacing <= site.roofAreaM2;
+  };
+  if (fits(defaultPanel)) return defaultPanel;
+
+  const pool = catalog.panels.length ? catalog.panels : PANELS;
+  const byDensity = pool.slice().sort((a, b) => b.wattage / b.areaM2 - a.wattage / a.areaM2);
+  return byDensity.find(fits) ?? byDensity[0] ?? defaultPanel;
+}
+
+/**
+ * Picks a battery model of the requested chemistry, preferring one whose
+ * voltage fits the system bus with the fewest series units (ideally an exact
+ * match) and, among equal fits, the highest capacity (fewest parallel units).
+ * Without this, "pick the first model of this chemistry" can land on a small
+ * 12V unit on a 48V bus, forcing 4x the series stack for no reason — which
+ * then multiplies badly once parallel count is also scaled for current headroom.
+ */
+function pickBattery(catalog: SolarCatalog, chemistry: SiteConfig['batteryChemistry'], systemVoltage: number, id?: string): CatalogBattery {
   const pool = catalog.batteries.length ? catalog.batteries : BATTERIES;
   if (id) {
     const found = pool.find((b) => b.id === id);
     if (found) return found;
   }
-  return pool.find((b) => b.chemistry === chemistry) ?? pool[0];
+  const matches = pool.filter((b) => b.chemistry === chemistry);
+  if (!matches.length) return pool[0];
+
+  const seriesFit = (b: CatalogBattery) => {
+    const series = Math.max(1, Math.round(systemVoltage / b.voltage));
+    return { series, exact: series * b.voltage === systemVoltage };
+  };
+  return matches.slice().sort((a, b) => {
+    const fa = seriesFit(a);
+    const fb = seriesFit(b);
+    if (fa.exact !== fb.exact) return fa.exact ? -1 : 1;
+    if (fa.series !== fb.series) return fa.series - fb.series;
+    return b.ah - a.ah;
+  })[0];
 }
 function inverterFamily(type: SiteConfig['systemType']): CatalogInverter['type'] {
   if (type === 'GRID_TIED') return 'GRID_TIE';
   return type;
 }
-function pickInverter(catalog: SolarCatalog, systemType: SiteConfig['systemType'], continuousW: number, surgeW: number, id?: string): { inverter: CatalogInverter; count: number } {
+
+interface InverterArrayChoice {
+  inverter: CatalogInverter;
+  count: number;
+  panelCount: number;
+  arrayWpActual: number;
+  stringSeriesCount: number;
+  stringParallelCount: number;
+  mpptsUsed: number;
+  stringVocColdV: number;
+  stringVmpHotV: number;
+  stringIscHotA: number;
+  upsizedForDcAc: boolean;
+}
+
+/**
+ * Chooses the inverter (and array/string configuration together) instead of
+ * picking the inverter from peak load alone and sizing the array from energy
+ * demand independently — the two used to never "talk", which is exactly what
+ * let a 5.5kWp array get paired with a 12kW inverter (DC:AC 0.46). For each
+ * inverter/parallel-count that clears the load requirement, this evaluates
+ * the resulting design and scores it by fit: within the DC:AC hard band and
+ * under the PV input cap scores best. When a load's peak power forces a
+ * bigger inverter than the load's energy need alone would size an array for,
+ * the array is grown to the DC:AC soft-band floor for that inverter (standard
+ * installer practice — make full economic use of an inverter you're forced
+ * into) rather than leaving it undersized.
+ */
+function chooseInverterAndArray(
+  catalog: SolarCatalog,
+  systemType: SiteConfig['systemType'],
+  mounting: MountingMethod,
+  panel: CatalogPanel,
+  arrayWpNeeded: number,
+  continuousWNeeded: number,
+  surgeWNeeded: number,
+  id?: string
+): InverterArrayChoice {
+  const cfg = DESIGN_RULES_CONFIG;
   const family = inverterFamily(systemType);
   const all = catalog.inverters.length ? catalog.inverters : INVERTERS;
-  const pool = all.filter((i) => i.type === family);
-  if (id) {
-    const found = pool.find((i) => i.id === id);
-    if (found) return { inverter: found, count: Math.max(1, Math.ceil(Math.max(continuousW, 1) / found.continuousW)) };
+  const pool = id ? all.filter((i) => i.id === id) : all.filter((i) => i.type === family);
+
+  const candidates: { inverter: CatalogInverter; count: number }[] = [];
+  for (const inv of pool) {
+    for (let count = 1; count <= 3; count++) {
+      if (inv.continuousW * count >= continuousWNeeded && inv.surgeW * count >= surgeWNeeded) {
+        candidates.push({ inverter: inv, count });
+        break;
+      }
+    }
   }
-  const fit = pool
+  if (!candidates.length) {
+    const largest = pool.slice().sort((a, b) => b.continuousW - a.continuousW)[0] ?? all[0];
+    if (largest) candidates.push({ inverter: largest, count: Math.max(1, Math.ceil(continuousWNeeded / largest.continuousW)) });
+  }
+
+  // Evaluate smallest-capacity candidates first: the smallest inverter that
+  // meets the load (upsizing its array to the DC:AC soft floor if needed) is
+  // preferred, since that floor-lift makes nearly any inverter "DC:AC-fit"-able
+  // and would otherwise give no cost signal to prefer a cheaper unit. A
+  // candidate is only skipped in favour of a bigger inverter when even the
+  // floor-lifted array can't be reconciled — DC:AC over the hard max, or over
+  // the inverter's absolute PV input cap.
+  const evaluated = candidates
     .slice()
-    .sort((a, b) => a.continuousW - b.continuousW)
-    .find((i) => i.continuousW >= continuousW && i.surgeW >= surgeW);
-  if (fit) return { inverter: fit, count: 1 };
-  const largest = pool.slice().sort((a, b) => b.continuousW - a.continuousW)[0] ?? all[0];
-  return { inverter: largest, count: Math.max(1, Math.ceil(continuousW / largest.continuousW)) };
+    .sort((a, b) => a.inverter.continuousW * a.count - b.inverter.continuousW * b.count)
+    .map(({ inverter, count }) => {
+      const dcAcFloorWp = inverter.mpptBuiltIn ? inverter.continuousW * count * cfg.dcac.softMin : 0;
+      const targetWp = Math.max(arrayWpNeeded, dcAcFloorWp);
+      const upsizedForDcAc = dcAcFloorWp > arrayWpNeeded * 1.02;
+
+      let panelCount: number, arrayWpActual: number, stringSeriesCount: number, stringParallelCount: number,
+        mpptsUsed: number, stringVocColdV: number, stringVmpHotV: number, stringIscHotA: number;
+
+      if (inverter.mpptBuiltIn && inverter.maxDcInputVoltage > 0) {
+        const sc = computeMpptStringConfig(panel, inverter, count, mounting, targetWp);
+        panelCount = sc.panelCount;
+        arrayWpActual = sc.arrayWpActual;
+        stringSeriesCount = sc.seriesCount;
+        stringParallelCount = sc.parallelStringsTotal;
+        mpptsUsed = sc.mpptsUsed;
+        stringVocColdV = sc.vocColdV;
+        stringVmpHotV = sc.vmpHotV;
+        stringIscHotA = sc.iscHotAPerMppt;
+      } else {
+        panelCount = Math.max(1, Math.ceil(targetWp / panel.wattage));
+        arrayWpActual = panelCount * panel.wattage;
+        stringSeriesCount = 1;
+        stringParallelCount = panelCount;
+        mpptsUsed = 1;
+        const { vocCold, vmpHot, iscHot } = tempCorrectedElectricals(panel, mounting);
+        stringVocColdV = vocCold;
+        stringVmpHotV = vmpHot;
+        stringIscHotA = iscHot;
+      }
+
+      const dcAcRatio = inverter.continuousW * count > 0 ? arrayWpActual / (inverter.continuousW * count) : 0;
+      const overHardMax = inverter.mpptBuiltIn && dcAcRatio > cfg.dcac.hardMax;
+      const overPvCap = inverter.maxPvInputW > 0 && arrayWpActual > inverter.maxPvInputW * count;
+      const feasible = !overHardMax && !overPvCap;
+
+      return { inverter, count, panelCount, arrayWpActual, stringSeriesCount, stringParallelCount, mpptsUsed, stringVocColdV, stringVmpHotV, stringIscHotA, upsizedForDcAc, feasible };
+    });
+
+  const best = evaluated.find((c) => c.feasible) ?? evaluated[0] ?? null;
+
+  return best!;
 }
+
 function pickController(catalog: SolarCatalog, chargeCurrentA: number, id?: string): { controller: CatalogController; count: number } {
   const pool = catalog.controllers.length ? catalog.controllers : CONTROLLERS;
   if (id) {
@@ -209,7 +348,7 @@ export function computeSystemDesign(loads: LoadItem[], site: SiteConfig, opts: E
   }
 
   const isGridTied = site.systemType === 'GRID_TIED';
-  const battery = pickBattery(catalog, site.batteryChemistry, opts.batteryId);
+  const battery = pickBattery(catalog, site.batteryChemistry, site.systemVoltage, opts.batteryId);
   const batteryRoundTripEff = isGridTied ? 1 : battery.roundTripEff;
   const systemEfficiency = site.inverterEfficiencyPct * (1 - site.wiringLossPct) * batteryRoundTripEff;
   const dailyEnergyAdjustedWh = systemEfficiency > 0 ? dailyEnergyWh / systemEfficiency : dailyEnergyWh;
@@ -219,58 +358,57 @@ export function computeSystemDesign(loads: LoadItem[], site: SiteConfig, opts: E
   // sizing and the worst-month recharge test below.
   const backupTargetWh = site.systemType === 'HYBRID' && essentialDailyEnergyWh > 0 ? essentialDailyEnergyWh : dailyEnergyWh;
 
-  // --- Inverter sizing (picked from the load profile, independent of array size) ---
-  const { inverter, count: inverterCount } = pickInverter(
+  // --- Array target (energy-driven, floored by the worst-month recharge need) & roof-aware panel choice ---
+  const performanceRatio = performanceRatioFor(site.mountingMethod);
+  const otherLossDerate = Math.max(0.5, Math.min(1, site.panelDeratingPct)); // dust/soiling/mismatch only — temperature is in performanceRatio
+  const worstMonthPsh = site.psh * DESIGN_RULES_CONFIG.worstMonthPshFactor;
+  const energyDrivenArrayWpNeeded = site.psh > 0 ? dailyEnergyAdjustedWh / (site.psh * performanceRatio * otherLossDerate) : dailyEnergyAdjustedWh;
+
+  // An array sized only for the ANNUAL AVERAGE daily energy need can still fail
+  // the worst-month recharge test (rainy-season PSH is much lower) — so, for a
+  // battery-backed design, also floor the target at what the worst month needs
+  // to recharge the bank with a comfortable margin, rather than only detecting
+  // the shortfall after the fact.
+  let arrayWpNeeded = energyDrivenArrayWpNeeded;
+  if (!isGridTied && worstMonthPsh > 0 && performanceRatio > 0) {
+    const daytimeLoadWh = backupTargetWh * site.daytimeLoadFractionPct;
+    const eveningLoadWh = backupTargetWh * (1 - site.daytimeLoadFractionPct);
+    const requiredChargeWh = battery.roundTripEff > 0 ? eveningLoadWh / battery.roundTripEff : eveningLoadWh;
+    const targetMarginMultiplier = 1 + DESIGN_RULES_CONFIG.rechargeTightMarginPct / 100;
+    const minArrayWpForRecharge = (daytimeLoadWh + requiredChargeWh * targetMarginMultiplier) / (worstMonthPsh * performanceRatio);
+    arrayWpNeeded = Math.max(arrayWpNeeded, minArrayWpForRecharge);
+  }
+  const upsizedForRecharge = arrayWpNeeded > energyDrivenArrayWpNeeded * 1.02;
+  if (upsizedForRecharge) {
+    warnings.push({
+      level: 'info',
+      message: `Array sized above the annual-average energy need to pass the worst-month (rainy-season) recharge test — the battery would not reach full charge every night in December–February otherwise.`,
+    });
+  }
+  const panel = pickPanelForRoof(catalog, site, arrayWpNeeded, opts.panelId);
+
+  // --- Inverter + array/string sizing, chosen together (see chooseInverterAndArray) ---
+  const choice = chooseInverterAndArray(
     catalog,
     site.systemType,
+    site.mountingMethod,
+    panel,
+    arrayWpNeeded,
     peakLoadW * INVERTER_SAFETY_FACTOR,
     surgeLoadW,
     opts.inverterId
   );
+  const { inverter, count: inverterCount, panelCount, arrayWpActual, stringSeriesCount, stringParallelCount, stringVocColdV, stringVmpHotV, stringIscHotA } = choice;
+  let mpptsUsed = choice.mpptsUsed;
+
   if (inverter.continuousW * inverterCount < peakLoadW) {
     warnings.push({ level: 'critical', message: 'Selected inverter capacity is below the calculated peak load even after paralleling available units — choose a larger model.' });
   }
-
-  // --- Array & string sizing ---
-  const performanceRatio = performanceRatioFor(site.mountingMethod);
-  const otherLossDerate = Math.max(0.5, Math.min(1, site.panelDeratingPct)); // dust/soiling/mismatch only — temperature is in performanceRatio
-  const arrayWpNeeded = site.psh > 0 ? dailyEnergyAdjustedWh / (site.psh * performanceRatio * otherLossDerate) : dailyEnergyAdjustedWh;
-  const panel = pickPanel(catalog, opts.panelId);
-
-  let panelCount: number;
-  let arrayWpActual: number;
-  let stringSeriesCount: number;
-  let stringParallelCount: number;
-  let mpptsUsed: number;
-  let stringVocColdV: number;
-  let stringVmpHotV: number;
-  let stringIscHotA: number;
-
-  if (inverter.mpptBuiltIn && inverter.maxDcInputVoltage > 0) {
-    const cfg = computeMpptStringConfig(panel, inverter, inverterCount, site.mountingMethod, arrayWpNeeded);
-    panelCount = cfg.panelCount;
-    arrayWpActual = cfg.arrayWpActual;
-    stringSeriesCount = cfg.seriesCount;
-    stringParallelCount = cfg.parallelStringsTotal;
-    mpptsUsed = cfg.mpptsUsed;
-    stringVocColdV = cfg.vocColdV;
-    stringVmpHotV = cfg.vmpHotV;
-    stringIscHotA = cfg.iscHotAPerMppt;
-  } else {
-    // Off-grid / external-controller topology: panels are matched to the charge
-    // controller's input window rather than a high-voltage MPPT string, which is a
-    // different (controller-specific) design convention outside this Design Rules
-    // doc's worked scope. String voltage/temperature checks don't apply here — the
-    // charge-controller pairing below still guards against an oversized array.
-    panelCount = Math.max(1, Math.ceil(arrayWpNeeded / panel.wattage));
-    arrayWpActual = panelCount * panel.wattage;
-    stringSeriesCount = 1;
-    stringParallelCount = panelCount;
-    mpptsUsed = 1;
-    const { vocCold, vmpHot, iscHot } = tempCorrectedElectricals(panel, site.mountingMethod);
-    stringVocColdV = vocCold;
-    stringVmpHotV = vmpHot;
-    stringIscHotA = iscHot;
+  if (choice.upsizedForDcAc) {
+    warnings.push({
+      level: 'info',
+      message: `Array sized above the calculated energy need (to ${(arrayWpActual / 1000).toFixed(2)} kWp) to keep the DC:AC ratio within the safe band for the ${inverter.model} — the peak/surge load, not the daily energy demand, drove the inverter choice.`,
+    });
   }
 
   // --- Battery sizing ---
@@ -292,7 +430,24 @@ export function computeSystemDesign(loads: LoadItem[], site: SiteConfig, opts: E
         message: `${battery.model} (${battery.voltage}V) does not divide evenly into a ${site.systemVoltage}V bank — choose a battery whose voltage is a clean multiple, or adjust system voltage.`,
       });
     }
-    batteryParallelCount = Math.max(1, Math.ceil(batteryBankAh / battery.ah));
+
+    // Parallel count must satisfy energy/autonomy AND the bank's charge/discharge
+    // current headroom against the array's peak DC power and the inverter's DC
+    // draw — sizing by energy alone (the old behavior) is exactly what produced
+    // BAT-CHG/BAT-DSCH failures the engine wasn't correcting for.
+    const energyBasedParallel = Math.max(1, Math.ceil(batteryBankAh / battery.ah));
+    const inverterDcDrawW = inverter.efficiencyPct > 0 ? (inverter.continuousW * inverterCount) / inverter.efficiencyPct : inverter.continuousW * inverterCount;
+    const chargeBasedParallel = battery.maxChargeCurrentA > 0 ? Math.ceil((arrayWpActual * DESIGN_RULES_CONFIG.battery.minChargeHeadroom) / (battery.maxChargeCurrentA * site.systemVoltage)) : 1;
+    const dischargeBasedParallel = battery.maxDischargeCurrentA > 0 ? Math.ceil((inverterDcDrawW * DESIGN_RULES_CONFIG.battery.minDischargeHeadroom) / (battery.maxDischargeCurrentA * site.systemVoltage)) : 1;
+    batteryParallelCount = Math.max(energyBasedParallel, chargeBasedParallel, dischargeBasedParallel);
+
+    if (batteryParallelCount > energyBasedParallel) {
+      warnings.push({
+        level: 'info',
+        message: `Battery count increased beyond the energy/autonomy requirement to give the bank enough charge/discharge current headroom for this array and inverter (${battery.brand} ${battery.model} is current-limited here, not capacity-limited).`,
+      });
+    }
+
     batteryTotalCount = batterySeriesCount * batteryParallelCount;
     batteryUsableKwh = (batteryTotalCount * battery.voltage * battery.ah * battery.maxDodPct) / 1000;
 
@@ -329,7 +484,6 @@ export function computeSystemDesign(loads: LoadItem[], site: SiteConfig, opts: E
   const roofAreaRequiredM2 = panel.areaM2 * panelCount * DESIGN_RULES_CONFIG.roof.spacingFactor;
   const requiredDcSpdUcpvV = stringVocColdV > 0 ? stringVocColdV * DESIGN_RULES_CONFIG.dcSpdUcpvFactor : 0;
 
-  const worstMonthPsh = site.psh * DESIGN_RULES_CONFIG.worstMonthPshFactor;
   let worstMonthMarginPct = 100;
   if (!isGridTied) {
     const worstMonthYieldWh = arrayWpActual * worstMonthPsh * performanceRatio;
